@@ -1,0 +1,47 @@
+# Nebius VM/GPU instance — create request template
+# Usage: fill in, then `nebius compute instance create -f instance.yaml`
+#
+# Field names mirror `nebius compute instance create --help` flags:
+# kebab-case flag -> snake_case field, flag prefix -> nesting
+# (--resources-platform -> spec.resources.platform). When unsure, verify
+# against a live instance: `nebius compute instance get <id> --format yaml`.
+metadata:
+  parent_id: project-e00example        # REQUIRED — target project NID
+  name: my-instance                    # human-readable, unique per project
+  labels: {}                           # optional, e.g. {team: ml, env: dev}
+spec:
+  resources:
+    platform: cpu-d3                   # from `nebius compute platform list` — e.g. gpu-h200-sxm
+    preset: 4vcpu-16gb                 # a preset of that platform — e.g. 8gpu-128vcpu-1600gb
+  boot_disk:
+    attach_mode: read_write            # read_only | read_write
+    existing_disk:
+      id: computedisk-e00example       # pre-created disk (see disk-template.yaml)…
+    # …or let create manage the boot disk instead of existing_disk:
+    # managed_disk:
+    #   name: my-instance-boot
+    #   type: network_ssd              # network_ssd | network_hdd | network_ssd_non_replicated | network_ssd_io_m3
+    #   size_gibibytes: 200
+    #   source_image_family:
+    #     image_family: ubuntu22.04-driverless   # `nebius compute image list-public` for choices
+  network_interfaces:
+    - name: eth0
+      subnet_id: vpcsubnet-e00example  # `nebius vpc subnet list --parent-id <project>`
+      ip_address: {}                   # allocate a private IP
+      # public_ip_address: {}          # uncomment for a public IP
+  # --- GPU-cluster membership (InfiniBand), for multi-node training ---
+  # gpu_cluster:
+  #   id: computegpucluster-e00example
+  # --- cloud-init ---
+  # cloud_init_user_data: |
+  #   #cloud-config
+  #   users:
+  #     - name: admin
+  #       ssh_authorized_keys:
+  #         - ssh-ed25519 AAAA... user@host
+  # --- preemptible / recovery ---
+  # preemptible:
+  #   on_preemption: stop              # only supported value
+  #   priority: 1
+  # recovery_policy: RECOVER           # RECOVER | FAIL | ALWAYS (ALWAYS: nvl-instance-group only)
+  # stopped: true                      # create without starting

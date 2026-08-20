@@ -1,0 +1,10 @@
+{
+  "name": "nebius-cloud",
+  "version": "0.1.0",
+  "description": "Operate Nebius AI Cloud resources from the nebius CLI: resource inventory, capacity and quota checks, gated provisioning, and limited editing. Read-only by default; destructive operations are structurally refused.",
+  "author": {
+    "name": "Nebius"
+  },
+  "keywords": ["nebius", "gpu", "cloud", "capacity", "quotas"],
+  "license": "Apache-2.0"
+}

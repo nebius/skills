@@ -1,0 +1,13 @@
+{
+  "skills": [
+    "nebius-cloud-basics",
+    "nebius-capacity-quotas"
+  ],
+  "query": "can i get 8 B200s in us-central1 right now? whats actually free",
+  "expected_behavior": [
+    "Resolves the TENANT id (nebius config get tenant-id) and passes it - not the project id - to capacity resource-advice list",
+    "Runs nebius capacity resource-advice list --parent-id <tenant> --format json --all",
+    "Filters for B200 platform and us-central1 region and reports reserved, on-demand, and preemptible availability separately",
+    "Runs nothing mutating"
+  ]
+}

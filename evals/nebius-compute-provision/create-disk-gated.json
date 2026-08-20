@@ -1,0 +1,13 @@
+{
+  "skills": [
+    "nebius-cloud-basics",
+    "nebius-compute-provision"
+  ],
+  "query": "create a 500 GiB network ssd disk called scratch-disk in the testing project",
+  "expected_behavior": [
+    "Resolves the project id for the testing profile",
+    "Preflights quota (quotas quota-allowance list) and optionally estimates cost via the calculator",
+    "Prints the fully resolved create command (or template) verbatim and STOPS for explicit confirmation before executing",
+    "After confirmation runs it exactly once and verifies with get/list"
+  ]
+}

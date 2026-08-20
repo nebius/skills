@@ -1,0 +1,12 @@
+{
+  "skills": [
+    "nebius-cloud-basics"
+  ],
+  "query": "im on the testing profile - which project and tenant am I actually pointed at? want to be sure before i touch anything",
+  "expected_behavior": [
+    "Runs nebius profile list and/or nebius profile current to ground the session",
+    "Resolves both IDs with nebius config get parent-id -p testing and nebius config get tenant-id -p testing (passes -p testing explicitly)",
+    "Optionally confirms identity with nebius iam whoami",
+    "Reports the project-... and tenant-... IDs clearly and runs nothing mutating"
+  ]
+}

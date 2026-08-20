@@ -1,0 +1,114 @@
+---
+name: nebius-compute-provision
+description: Gated provisioning for Nebius Compute - create or update VM instances, disks, filesystems, and GPU clusters from reviewed YAML templates with capacity, quota, and cost preflight, plus gated start/stop. Use for "create a VM", "provision a GPU cluster", "launch 8xH200", "resize this disk", "add a filesystem", "stop that instance". Always previews the exact command and waits for explicit user confirmation before any mutation; never deletes resources - deletion commands are printed for the human to run, never executed.
+license: Apache-2.0
+compatibility: Requires the nebius CLI (>=0.12) with a configured profile; jq recommended
+metadata:
+  version: "0.1.0"
+allowed-tools:
+  - Bash(nebius profile list:*)
+  - Bash(nebius profile current:*)
+  - Bash(nebius config get:*)
+  - Bash(nebius compute platform list:*)
+  - Bash(nebius compute image list-public:*)
+  - Bash(nebius compute image get-latest-by-family:*)
+  - Bash(nebius compute instance list:*)
+  - Bash(nebius compute instance get:*)
+  - Bash(nebius compute instance get-by-name:*)
+  - Bash(nebius compute disk list:*)
+  - Bash(nebius compute disk get:*)
+  - Bash(nebius compute gpu-cluster list:*)
+  - Bash(nebius compute gpu-cluster get:*)
+  - Bash(nebius compute filesystem list:*)
+  - Bash(nebius compute filesystem get:*)
+  - Bash(nebius capacity resource-advice list:*)
+  - Bash(nebius quotas quota-allowance list:*)
+  - Bash(nebius quotas quota-allowance get-by-name:*)
+  - Bash(nebius billing v1alpha1 calculator estimate:*)
+  - Bash(nebius billing v1alpha1 calculator estimate-batch:*)
+  - Bash(jq:*)
+---
+
+# Nebius Compute Provisioning (gated)
+
+Create and change compute resources deliberately: preflight capacity, quota, and cost; render a reviewable spec; show the exact command; run it once after explicit confirmation.
+
+Note: `allowed-tools` above pre-approves only the read-only preflight commands. Every `create`/`update`/`start`/`stop` goes through the normal permission flow *and* the confirmation gate below — that is intentional, not an omission.
+
+<!-- BEGIN SHARED PREAMBLE (generated from shared/preamble.md — edit there, then run scripts/sync-shared.py) -->
+## Nebius CLI ground rules
+
+These rules apply to every command in this skill. Full detail lives in the `nebius-cloud-basics` skill.
+
+**Resolve context first — never guess IDs.** Nearly every call needs `--parent-id`, and the CLI does not say which scope it wants:
+
+```bash
+nebius profile current                        # which profile is active
+nebius config get parent-id  [-p <profile>]   # project-...  (project scope)
+nebius config get tenant-id  [-p <profile>]   # tenant-...   (tenant scope)
+```
+
+Compute and quota commands are **project**-scoped; capacity advice, capacity block groups, and capacity intervals are **tenant**-scoped. The wrong scope returns empty lists or permission errors, not a helpful message. Pass `-p <profile>` explicitly whenever the user names a profile.
+
+**Output.** Add `--format json` to every call and parse that; the default table output is for humans. On `list` calls add `--all` to disable paging. Never pass `-i`/`--interactive`: it opens alternate-screen pagination and hangs unattended sessions.
+
+**Editing.** Never run `edit` or `edit-by-name`: they open `$EDITOR` and hang in a non-interactive shell. Use `update` with explicit flags or `update -f <file>` instead.
+
+**Async operations.** Mutations return an operation; by default the CLI blocks until it completes. With `--async` it returns an operation id — poll with `nebius <service> <resource> operation wait <operation-id>`.
+
+**Safety tiers.**
+
+| Tier | Operations | Behavior |
+|---|---|---|
+| A — read | `list`, `get`, `get-by-name`, `batch-get`, `list-*`, `logs`, `--help` | Run freely. |
+| B — gated write | `create`, `update`, `start`, `stop`, quota/capacity allowance changes | Print the fully resolved command verbatim, state what it changes and the cost implication, wait for explicit user confirmation, then run it exactly once. Never batch mutations; never retry one after an ambiguous failure. |
+| C — refuse | `delete`, `purge`, credential issuance (`iam get-access-token`, access keys), `--impersonate-service-account-id` | Do not run. Print the exact command for the human to run themselves and explain the blast radius. |
+
+**Secrets.** Never print or persist tokens, access keys, or the contents of `~/.nebius/credentials.json`.
+<!-- END SHARED PREAMBLE -->
+
+## The provisioning workflow (follow in order, no skipping)
+
+1. **Gather requirements.** Resource type, name, project (`PROJECT=$(nebius config get parent-id)` unless the user names one), and for instances: platform + preset, boot image, subnet. Anything missing → ask, don't default silently.
+2. **Preflight — all three, before writing any spec:**
+   ```bash
+   # (a) valid platform/preset names in this region
+   nebius compute platform list --parent-id "$PROJECT" --format json --all
+   # (b) physical capacity (tenant-scoped!)
+   nebius capacity resource-advice list --parent-id "$(nebius config get tenant-id)" --format json --all
+   # (c) project quota headroom
+   nebius quotas quota-allowance list --parent-id "$PROJECT" --format json --all
+   ```
+   If capacity or quota can't cover the request, stop and report — do not create a resource that will sit unschedulable.
+3. **Estimate cost** where the calculator supports the resource, e.g. for a disk:
+   ```bash
+   nebius billing v1alpha1 calculator estimate \
+     --resource-spec-compute-disk-spec-type network_ssd \
+     --resource-spec-compute-disk-spec-size-gibibytes 500 --format json
+   ```
+4. **Build the spec.** Simple resources (disk, filesystem, gpu-cluster) fit in explicit flags. Instances have 30+ create flags — use a template file instead: copy the matching file from [assets/](assets/), fill it in, and pass it with `create -f <file>`. Template field names mirror the create flags (kebab-case flag → snake_case field, flag prefix → nesting); verify the final shape against a live resource (`get --format yaml`) when one exists.
+5. **Confirmation gate.** Print, verbatim: the full command, the rendered template (if any), what will be created/changed, and the cost estimate. Then **stop and wait for an explicit yes**. No confirmation → no mutation. Never bundle two mutations into one confirmation.
+6. **Execute once.** Prefer blocking mode (no `--async`) for single resources; for slow creates use `--async` and `nebius compute <resource> operation wait <op-id>`. If the outcome is ambiguous (timeout, dropped connection): do **not** re-run — check `list`/`get` and `list-operations-by-parent` first.
+7. **Verify and report.** `get` the resource, report id, name, and state.
+
+## Updates (the only editing path)
+
+Never `edit`/`edit-by-name` ($EDITOR hang). Two safe options:
+
+- **Small change** — explicit flags: `nebius compute disk update <id> --size-gibibytes 1000` (updates only named fields).
+- **File-driven** — `update -f <file>` implies `--full`: the file **replaces** the whole spec. Always start from current state: `nebius compute disk get <id> --format yaml > disk.yaml`, edit that, submit it back. Keep `metadata.resource_version` from the `get` so a concurrent change fails loudly instead of being overwritten.
+
+Both are Tier B: preview → confirm → run once → verify.
+
+`start`/`stop` are also Tier B. Warn on `stop`: it releases non-reserved GPU capacity, which may not be available again at `start`.
+
+## Refusals (Tier C — always)
+
+`delete` of any resource is never executed by this skill, even on direct request. `compute instance delete` also deletes managed disks declared in the instance spec. Print the exact command for the human, explain what is destroyed and what depends on it. Snapshot-before-delete advice: suggest `nebius compute disk-snapshot` workflows so data outlives the resource.
+
+## Templates
+
+- [assets/instance-template.yaml](assets/instance-template.yaml) — VM/GPU instance (the 30-flag case)
+- [assets/disk-template.yaml](assets/disk-template.yaml)
+- [assets/filesystem-template.yaml](assets/filesystem-template.yaml)
+- [assets/gpu-cluster-template.yaml](assets/gpu-cluster-template.yaml)

@@ -1,0 +1,13 @@
+{
+  "skills": [
+    "nebius-cloud-basics",
+    "nebius-compute-inventory"
+  ],
+  "query": "what VMs are running in our testing project right now? names and states pls",
+  "expected_behavior": [
+    "Resolves the project id for the testing profile (config get parent-id -p testing), does not guess",
+    "Runs nebius compute instance list --parent-id <project> --format json --all (with -p testing)",
+    "Extracts name and status.state per instance (e.g. via jq) and presents a readable table",
+    "Runs only Tier A read commands"
+  ]
+}

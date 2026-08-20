@@ -1,1 +1,63 @@
-# skills
+# Nebius Agent Skills
+
+Portable, pure-text agent skills for operating **Nebius AI Cloud** with the `nebius` CLI. One repo serves three channels: a Claude Code plugin marketplace, a Codex plugin marketplace, and a plain `skills/` tree for `npx skills`.
+
+No server, no runtime dependency beyond the `nebius` CLI you already have.
+
+> **Status: Phase 1 (private).** Not published anywhere until nebius org approval — see the project plan. Install only from a local checkout or private URL.
+
+## Skills
+
+| Skill | What it does |
+|---|---|
+| [nebius-cloud-basics](skills/nebius-cloud-basics/SKILL.md) | Foundation: profiles, `--parent-id`/tenant resolution, JSON output, paging, async operations, safety tiers |
+| [nebius-compute-inventory](skills/nebius-compute-inventory/SKILL.md) | Read-only inventory: instances, disks, filesystems, GPU clusters, images, platforms |
+| [nebius-capacity-quotas](skills/nebius-capacity-quotas/SKILL.md) | "Can I launch 8×B200?" — capacity advice (tenant-scoped), reservations, quota allowances |
+| [nebius-compute-provision](skills/nebius-compute-provision/SKILL.md) | Gated create/update of instances, disks, filesystems, GPU clusters — template-driven, preflighted |
+
+Nebius **Token Factory** (inference / fine-tuning) is intentionally out of scope — it has a separate API and keys. See [Arindam200/nebius-skills](https://github.com/Arindam200/nebius-skills) for that lifecycle.
+
+## Safety model
+
+Every skill ships the same three-tier model, in prose **and** in `allowed-tools`:
+
+- **Tier A — read**: `list`/`get`/`get-by-name`/… run freely (pre-approved via `allowed-tools`).
+- **Tier B — gated write**: `create`/`update`/`start`/`stop` — the agent prints the exact command, states effect and cost, and waits for explicit confirmation. Never pre-approved.
+- **Tier C — refuse**: `delete`, `purge`, credential issuance, impersonation — never executed; the command is printed for a human to run.
+
+Full rationale: [skills/nebius-cloud-basics/references/safety-tiers.md](skills/nebius-cloud-basics/references/safety-tiers.md) and [SECURITY.md](SECURITY.md).
+
+## Install
+
+Prerequisite everywhere: `nebius` CLI ≥ 0.12 with a configured profile ([docs](https://docs.nebius.com/cli)).
+
+| Agent | Command |
+|---|---|
+| Claude Code | `/plugin marketplace add <path-or-url>` then `/plugin install nebius-cloud@nebius` |
+| Codex | `codex plugin marketplace add <path-or-url>`, restart, enable the plugin |
+| Anything else ([Agent Skills](https://agentskills.io)-compatible) | `npx skills add <path-or-url>` |
+
+## Repository layout
+
+```
+.agents/plugins/     Codex marketplace manifest
+.claude-plugin/      Claude Code marketplace + plugin manifest (plugin root = repo root)
+.codex-plugin/       Codex plugin manifest
+evals/               ≥3 scenarios per skill
+scripts/             sync + validation tooling
+shared/preamble.md   shared block stamped into every SKILL.md (scripts/sync-shared.py)
+skills/              canonical skill payload — spec-conformant, vendor-neutral
+```
+
+## Development
+
+```bash
+bash scripts/validate.sh          # everything CI runs
+python3 scripts/sync-shared.py    # re-stamp shared/preamble.md into all skills
+```
+
+Authoring conventions live in [CONTRIBUTING.md](CONTRIBUTING.md). Key invariants: frontmatter uses only the six Agent Skills spec keys; descriptions ≤ 600 chars; bodies ≤ 500 lines; no real tenant/project IDs anywhere in the repo.
+
+## License
+
+Apache-2.0 — see [LICENSE](LICENSE).

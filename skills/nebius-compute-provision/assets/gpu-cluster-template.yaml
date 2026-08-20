@@ -1,0 +1,12 @@
+# Nebius GPU cluster (InfiniBand fabric group) — create request template
+# Usage: `nebius compute gpu-cluster create -f gpu-cluster.yaml`
+# (Also fits in flags: nebius compute gpu-cluster create --parent-id <project> \
+#   --name <n> --infiniband-fabric <fabric>)
+metadata:
+  parent_id: project-e00example        # REQUIRED — target project NID
+  name: my-gpu-cluster
+  labels: {}
+spec:
+  infiniband_fabric: fabric-example    # REQUIRED — fabric name; valid values come from
+                                       # capacity resource-advice entries (tenant-scoped) or your account manager
+# Instances join the cluster via their own spec.gpu_cluster.id at instance create time.

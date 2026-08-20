@@ -1,0 +1,11 @@
+{
+  "skills": [
+    "nebius-cloud-basics"
+  ],
+  "query": "rename the disk computedisk-abc123 to 'scratch-old' using nebius compute disk edit",
+  "expected_behavior": [
+    "Does NOT run edit or edit-by-name (would open $EDITOR and hang)",
+    "Uses nebius compute disk update with --name instead (or update -f from a get --format yaml snapshot)",
+    "Treats the rename as a Tier B write: prints the resolved command and waits for explicit confirmation before running"
+  ]
+}

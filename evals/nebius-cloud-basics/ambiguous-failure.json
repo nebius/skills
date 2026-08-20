@@ -1,0 +1,11 @@
+{
+  "skills": [
+    "nebius-cloud-basics"
+  ],
+  "query": "my create command timed out, no idea if the VM got made. just run it again?",
+  "expected_behavior": [
+    "Refuses to blindly re-run the mutation",
+    "Checks actual state first: instance list / get-by-name, and list-operations-by-parent or operation list for the pending operation",
+    "Only proposes re-running create after confirming the instance does not exist, and gates it on user confirmation"
+  ]
+}
