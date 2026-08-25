@@ -25,6 +25,25 @@
 
 `shared/preamble.md` is stamped into every `SKILL.md` between generated markers at build time (no cross-skill runtime references — they break when a client installs a single skill). Edit the preamble, run `scripts/sync-shared.py`, commit both. CI fails on drift.
 
+## Releasing
+
+Installed marketplaces update by the `version` field (git SHA is only the fallback), so users get controlled updates exactly when we bump it. Per release:
+
+1. Bump `version` in **all three** manifests — `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` (`metadata.version`), and `.codex-plugin/plugin.json` — keep them identical (`scripts/validate.sh` enforces this). Codex users pull the bump via `codex plugin marketplace upgrade nebius`; Claude Code marketplaces can auto-update.
+2. Add a `CHANGELOG.md` entry.
+3. Tag the release commit `vX.Y.Z` (matching the version) and create a GitHub Release.
+
+### Going public (one-time, at repo publication)
+
+- Remove the "Phase 1 (private)" banner from README.md.
+- Tag `v0.1.0`.
+- Add GitHub topics: `claude-code`, `agent-skills`, `claude-plugin`, `nebius`.
+- Submit to [anthropics/claude-plugins-community](https://github.com/anthropics/claude-plugins-community) and <https://platform.claude.com/plugins/submit>.
+- Submit to the OpenAI plugin directory (shared by ChatGPT and Codex) via the official submission portal — see the [plugin publishing docs](https://developers.openai.com/plugins/build/plugins).
+- List on the [agentskills.io](https://agentskills.io) directory.
+- Smoke-test Claude Code from a clean machine: `claude plugin marketplace add nebius/skills && claude plugin install nebius-cloud@nebius`, then confirm all four skills appear and trigger.
+- Smoke-test Codex: `codex plugin marketplace add nebius/skills`, install `nebius-cloud` from `/plugins`, start a new session, confirm the skills trigger. (Codex has no validate CLI — this manual pass plus the JSON lint in `scripts/validate.sh` is the coverage.)
+
 ## Eval scenario shape
 
 ```json

@@ -14,6 +14,20 @@ for d in skills/*/; do
   npx --yes skills-ref validate "$d"
 done
 
+echo "== manifest lint + version sync (claude + codex) =="
+python3 - <<'EOF'
+import json, sys
+versions = {
+    ".claude-plugin/plugin.json": json.load(open(".claude-plugin/plugin.json"))["version"],
+    ".claude-plugin/marketplace.json": json.load(open(".claude-plugin/marketplace.json"))["metadata"]["version"],
+    ".codex-plugin/plugin.json": json.load(open(".codex-plugin/plugin.json"))["version"],
+}
+json.load(open(".agents/plugins/marketplace.json"))  # no version field; lint only
+if len(set(versions.values())) != 1:
+    sys.exit("version mismatch: " + ", ".join(f"{p}={v}" for p, v in versions.items()))
+print(f"ok: {next(iter(versions.values()))}")
+EOF
+
 echo "== claude plugin validate =="
 if command -v claude >/dev/null 2>&1; then
   claude plugin validate . --strict

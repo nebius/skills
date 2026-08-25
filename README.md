@@ -4,7 +4,7 @@ Portable, pure-text agent skills for operating **Nebius AI Cloud** with the `neb
 
 No server, no runtime dependency beyond the `nebius` CLI you already have.
 
-> **Status: Phase 1 (private).** Not published anywhere until nebius org approval — see the project plan. Install only from a local checkout or private URL.
+> **Status: Phase 1 (private).** Not published anywhere until nebius org approval — see the project plan. Until the repo is public, replace `nebius/skills` in the commands below with a local checkout path or private URL.
 
 ## Skills
 
@@ -31,11 +31,54 @@ Full rationale: [skills/nebius-cloud-basics/references/safety-tiers.md](skills/n
 
 Prerequisite everywhere: `nebius` CLI ≥ 0.12 with a configured profile ([docs](https://docs.nebius.com/cli)).
 
-| Agent | Command |
-|---|---|
-| Claude Code | `/plugin marketplace add <path-or-url>` then `/plugin install nebius-cloud@nebius` |
-| Codex | `codex plugin marketplace add <path-or-url>`, restart, enable the plugin |
-| Anything else ([Agent Skills](https://agentskills.io)-compatible) | `npx skills add <path-or-url>` |
+### Claude Code
+
+```
+/plugin marketplace add nebius/skills
+/plugin install nebius-cloud@nebius
+```
+
+Or non-interactively:
+
+```bash
+claude plugin marketplace add nebius/skills && claude plugin install nebius-cloud@nebius
+```
+
+To pin a release instead of tracking `main`: `/plugin marketplace add nebius/skills@v0.1.0`.
+
+### Codex
+
+```bash
+codex plugin marketplace add nebius/skills
+```
+
+then restart Codex and enable the `nebius-cloud` plugin (or install it from the `/plugins` browser in the TUI).
+
+Codex does not auto-update marketplaces — pull new releases with `codex plugin marketplace upgrade nebius`. To pin a release: `codex plugin marketplace add nebius/skills --ref v0.1.0`.
+
+### Anything else ([Agent Skills](https://agentskills.io)-compatible)
+
+```bash
+npx skills add nebius/skills
+```
+
+As a last resort, copy `skills/*` into your agent's skills directory (e.g. `~/.claude/skills/`) — works, but you get no versioning and no update path.
+
+### Teams
+
+To roll the plugin out to a whole team, add it to a shared or managed `settings.json` ([docs](https://code.claude.com/docs/en/plugin-marketplaces)):
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "nebius": {
+      "source": { "source": "github", "repo": "nebius/skills" },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": ["nebius-cloud@nebius"]
+}
+```
 
 ## Repository layout
 
