@@ -1,8 +1,8 @@
 ---
 name: nebius-capacity-quotas
-description: Capacity and quota checks for Nebius. Use for "can I launch 8xB200 in us-central1-b", "where is available free GPU capacity", "how much quota do I have", "what's in our reservation", "request a quota increase" - any capacity or quota question.
+description: GPU capacity advice and quota checks for Nebius. Use for "can I launch 8xB200 in us-central1-b", "what GPU capacity is currently advised", "how much quota do I have", "what's in our reservation", or "request a quota increase".
 license: Apache-2.0
-compatibility: Requires the nebius CLI (>=0.12) with a configured profile; jq recommended
+compatibility: Requires the nebius CLI (>=0.12.247) with a configured profile; jq recommended
 metadata:
   version: "0.1.0"
 allowed-tools:
@@ -29,7 +29,7 @@ allowed-tools:
 
 # Nebius Capacity & Quotas
 
-Where and whether resources can actually be launched: physical capacity (tenant-wide), reservations (capacity block groups), and quota allowances (per project/region).
+GPU VM launch guidance: timestamped physical-capacity advice (tenant-wide), reservations (capacity block groups), and quota allowances (per project/region). Capacity advice is not a launch guarantee and does not cover CPU-only VMs or storage resources.
 
 <!-- BEGIN SHARED PREAMBLE (generated from shared/preamble.md — edit there, then run scripts/sync-shared.py) -->
 ## Nebius CLI ground rules
@@ -45,7 +45,9 @@ nebius config get parent-id    # project-...
 nebius config get tenant-id    # tenant-...
 ```
 
-If any of these fails or comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and `profile create` opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call, and re-auth is the same human task.
+These skills require CLI `0.12.247` or newer. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
+
+If any check fails or an ID comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and the shown federation-profile command opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call, and re-auth is the same human task.
 
 **Resolve context first — never guess IDs.** Nearly every call needs `--parent-id`, and the CLI does not say which scope it wants:
 
@@ -55,9 +57,9 @@ nebius config get parent-id  [-p <profile>]   # project-...  (project scope)
 nebius config get tenant-id  [-p <profile>]   # tenant-...   (tenant scope)
 ```
 
-Compute and quota commands are **project**-scoped; capacity advice, capacity block groups, and capacity intervals are **tenant**-scoped. The wrong scope returns empty lists or permission errors, not a helpful message. Pass `-p <profile>` explicitly whenever the user names a profile.
+Compute resources are generally **project**-scoped; public-image discovery is region-scoped. Quota allowances may be project- or tenant-scoped. Capacity advice, capacity block groups, and capacity intervals are **tenant**-scoped. The wrong scope often returns empty lists or permission errors, not a helpful message. Pass `-p <profile>` explicitly whenever the user names a profile.
 
-**Output.** Add `--format json` to every call and parse that; the default table output is for humans. On `list` calls add `--all` to disable paging. Never pass `-i`/`--interactive`: it opens alternate-screen pagination and hangs unattended sessions. Never pass `--follow` (e.g. `compute instance logs --follow`, `logging query --follow`): it streams until killed and hangs an unattended session the same way.
+**Output.** Add `--format json` to API calls and parse that; the default table output is for humans. On paginated `list` calls, add `--all` only when `--help` exposes it. Some list-like commands differ: for example, `compute image list-public` requires `--region` and has no `--all`. Never pass `-i`/`--interactive`: it opens interactive entry or alternate-screen pagination and hangs unattended sessions. Never pass `--follow` (e.g. `compute instance logs --follow`, `logging query --follow`): it streams until killed and hangs an unattended session the same way.
 
 **Editing.** Never run `edit` or `edit-by-name`: they open `$EDITOR` and hang in a non-interactive shell. Use `update` with explicit flags or `update -f <file>` instead.
 
@@ -83,11 +85,11 @@ TENANT=$(nebius config get tenant-id)
 nebius capacity resource-advice list --parent-id "$TENANT" --format json --all
 ```
 
-Each advice entry is one (region, fabric, platform, preset) combination reporting current availability for three allocation types: **reserved**, **on-demand**, **preemptible** — already clipped by the tenant's quotas.
+Each advice entry is one GPU VM (region, fabric, platform, preset) combination reporting timestamped availability for three allocation types: **reserved**, **on-demand**, **preemptible** — already clipped by the tenant's quotas. Advice can become stale and does not guarantee that a later create will succeed.
 
 ## Where region, platform, and preset names come from
 
-Never type one from memory, and never go hunting for a catalogue — the CLI has no region-listing command anywhere in its tree. One call enumerates every valid combination:
+Never type platform or preset names from memory. For GPU VM capacity, this call enumerates the combinations currently reported by Capacity Advisor:
 
 ```bash
 nebius capacity resource-advice list --parent-id "$TENANT" --format json --all \
@@ -95,13 +97,13 @@ nebius capacity resource-advice list --parent-id "$TENANT" --format json --all \
   | sort -u
 ```
 
-Run this **once** per session and reuse the output — the workflow below needs the same call. Expected shapes: region `us-central1-b`, platform `gpu-b200-sxm`, preset `8gpu-160vcpu-1792gb`.
+Run this once per session and reuse the output while checking `data_state` and `effective_at`. Region values are opaque service output and may be plain (`eu-north1`) or location-specific (`us-central1-b`); platform and preset examples include `gpu-b200-sxm` and `8gpu-160vcpu-1792gb`.
 
 - `nebius compute platform list --parent-id "$PROJECT" --format json --all` answers "which presets exist for platform X" from the project side. It says nothing about availability.
-- **Two region vocabularies — never translate between them by hand.** Capacity regions carry a location suffix (`us-central1-b`); quota `--region` takes the plain form (`eu-north1`). Take each from its own source: capacity from `resource-advice`, quota from `quota-allowance list` output. A capacity region passed to a quota lookup returns nothing, not an error.
+- **Do not translate regions by hand.** Use the region string from `resource-advice` only to filter that response. For quota lookups, use the plain region from quota output (for example, `eu-north1`). The strings may coincide, but location-specific capacity values such as `us-central1-b` are not valid quota regions.
 - `resource-advice list --help` claims it "supports filtering by region, resource type, or platform", but exposes no filter flags. Filtering is client-side jq only.
 
-If the user's region or platform isn't in the enumeration, say so, show what is, and ask one question. Don't widen the search.
+If a requested GPU platform is valid according to `compute platform list` but absent from Capacity Advisor, report that no advice is available; do not claim the platform is invalid. Capacity Advisor provides no answer for CPU-only VMs or storage.
 
 ## Workflow: "Can I launch 8×B200 in us-central1-b?"
 
@@ -111,8 +113,8 @@ If the user's region or platform isn't in the enumeration, say so, show what is,
    nebius capacity resource-advice list --parent-id "$TENANT" --format json --all \
      | jq '.items[] | select((.spec.compute_instance.platform | test("b200")) and (.spec.region | test("us-central1")))'
    ```
-   Entry shape (verify on first call, the API is versioned): `spec.region`, `spec.fabric`, `spec.compute_instance.platform`, `spec.compute_instance.preset.name` (+ `.resources` with gpu/vcpu/memory counts), and `status.reserved` / `status.on_demand` / `status.preemptible`, each carrying `availability_level` (e.g. `AVAILABILITY_LEVEL_LOW`, `AVAILABILITY_LEVEL_LIMIT_REACHED`), a numeric `limit` where applicable, and `data_state` freshness.
-3. Report all three allocation types with their `availability_level` and `limit` — a "no on-demand" answer with free preemptible capacity is a useful answer.
+   Entry shape (verify on first call, the API is versioned): `spec.region`, `spec.fabric`, `spec.compute_instance.platform`, `spec.compute_instance.preset.name`, resource counts under `spec.compute_instance.preset.resources`, and `status.reserved` / `status.on_demand` / `status.preemptible`. Each status may contain `available`, `limit`, `availability_level`, `data_state`, and `effective_at`; fields can be absent when not applicable.
+3. Report all three allocation types with `available`, `limit`, `availability_level`, `data_state`, and `effective_at` when present. State that the result is timestamped advice, not guaranteed free capacity. A "no on-demand" answer with advised preemptible capacity is still useful.
 4. Cross-check the project's quota if the user intends to launch (capacity and quota fail independently):
    ```bash
    nebius quotas quota-allowance list --parent-id "$PROJECT" --format json --all \

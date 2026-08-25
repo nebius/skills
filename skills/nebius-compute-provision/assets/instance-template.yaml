@@ -25,10 +25,11 @@ spec:
     # …or let create manage the boot disk instead of existing_disk:
     # managed_disk:
     #   name: my-instance-boot
-    #   type: network_ssd              # network_ssd | network_hdd | network_ssd_non_replicated | network_ssd_io_m3
-    #   size_gibibytes: 200
-    #   source_image_family:
-    #     image_family: ubuntu22.04-driverless   # `nebius compute image list-public` for choices
+    #   spec:
+    #     type: network_ssd            # network_ssd | network_hdd | network_ssd_non_replicated | network_ssd_io_m3
+    #     size_gibibytes: 200
+    #     source_image_family:
+    #       image_family: <image-family>  # discover for the project's region; do not reuse a stale family
   network_interfaces:
     - name: eth0
       subnet_id: vpcsubnet-e00example  # `nebius vpc subnet list --parent-id <project>`
@@ -47,6 +48,5 @@ spec:
   # --- preemptible / recovery ---
   # preemptible:
   #   on_preemption: stop              # only supported value
-  #   priority: 1
   # recovery_policy: recover           # recover | fail | always (always: nvl-instance-group only)
   # stopped: true                      # create without starting

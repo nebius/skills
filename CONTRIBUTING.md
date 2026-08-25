@@ -15,7 +15,7 @@
 3. **Frontmatter: only the six spec keys** — `name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`. Claude Code tolerates its own extensions; claude.ai upload and the Skills API hard-error on them. Spec-only frontmatter runs everywhere.
 4. **Body under 500 lines**, ideally under ~150. Long material goes to `references/` — one level deep, never nested. Reference files over 100 lines start with a table of contents.
 5. **Degrees of freedom match fragility**: inventory/read work gets high-freedom prose; provisioning gets a low-freedom numbered workflow with exact command sequences.
-6. **`compatibility`** states the real prerequisite (e.g. `Requires the nebius CLI (>=0.12) with a configured profile; jq recommended`).
+6. **`compatibility`** states the real prerequisite (currently `Requires the nebius CLI (>=0.12.247) with a configured profile; jq recommended`). When a skill adopts a newer CLI command or flag, raise the floor in every affected skill and the README.
 7. **Templates over flag soup**: every `create` path ships a commented YAML request template in `assets/`, used as `nebius <svc> <res> create -f <file>`.
 8. **`allowed-tools` enumerates read-only command prefixes only** — never `Bash(nebius:*)`, which would pre-approve `delete`. Mutations must go through the client's normal permission flow. Nothing outside `nebius` belongs there either: `Bash(jq:*)` would pre-approve `jq . ~/.nebius/credentials.json`, so jq stays on the normal permission flow (a pipe whose left side is allowed still only prompts once).
 9. **No time-sensitive statements** in skill bodies. Deprecations go in a collapsed "Old patterns" section with their sunset date.

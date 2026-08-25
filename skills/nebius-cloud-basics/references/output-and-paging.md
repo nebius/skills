@@ -31,7 +31,8 @@ List responses put resources under `.items[]`; each resource has `metadata` (id,
 
 List calls take `--page-size` (often capped at 1000) and `--page-token`, and return a `next_page_token` when more pages exist.
 
-- For bounded work, pass `--all` — the CLI follows pages itself and returns everything.
+- For bounded work, pass `--all` when the command's `--help` exposes it — the CLI follows pages itself and returns everything.
+- Do not assume every command named `list` supports `--all`; `compute image list-public`, for example, requires `--region` and uses only `--page-size`/`--page-token`.
 - Only page manually (`--page-size` + `--page-token` loop) when a list is huge and you need to stop early.
 - **Never** pass `-i`/`--interactive`: it renders pages on an alternate screen and waits for keypresses — an unattended session hangs forever.
 

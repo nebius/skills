@@ -2,7 +2,7 @@
 name: nebius-compute-provision
 description: Gated provisioning for Nebius Compute. Use for "create a VM", "provision a GPU cluster", "launch 8xH200", "resize this disk", "add a filesystem", "stop that instance" - any create, update, start, or stop.
 license: Apache-2.0
-compatibility: Requires the nebius CLI (>=0.12) with a configured profile; jq recommended
+compatibility: Requires the nebius CLI (>=0.12.247) with a configured profile; jq recommended
 metadata:
   version: "0.1.0"
 allowed-tools:
@@ -49,7 +49,9 @@ nebius config get parent-id    # project-...
 nebius config get tenant-id    # tenant-...
 ```
 
-If any of these fails or comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and `profile create` opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call, and re-auth is the same human task.
+These skills require CLI `0.12.247` or newer. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
+
+If any check fails or an ID comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and the shown federation-profile command opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call, and re-auth is the same human task.
 
 **Resolve context first — never guess IDs.** Nearly every call needs `--parent-id`, and the CLI does not say which scope it wants:
 
@@ -59,9 +61,9 @@ nebius config get parent-id  [-p <profile>]   # project-...  (project scope)
 nebius config get tenant-id  [-p <profile>]   # tenant-...   (tenant scope)
 ```
 
-Compute and quota commands are **project**-scoped; capacity advice, capacity block groups, and capacity intervals are **tenant**-scoped. The wrong scope returns empty lists or permission errors, not a helpful message. Pass `-p <profile>` explicitly whenever the user names a profile.
+Compute resources are generally **project**-scoped; public-image discovery is region-scoped. Quota allowances may be project- or tenant-scoped. Capacity advice, capacity block groups, and capacity intervals are **tenant**-scoped. The wrong scope often returns empty lists or permission errors, not a helpful message. Pass `-p <profile>` explicitly whenever the user names a profile.
 
-**Output.** Add `--format json` to every call and parse that; the default table output is for humans. On `list` calls add `--all` to disable paging. Never pass `-i`/`--interactive`: it opens alternate-screen pagination and hangs unattended sessions. Never pass `--follow` (e.g. `compute instance logs --follow`, `logging query --follow`): it streams until killed and hangs an unattended session the same way.
+**Output.** Add `--format json` to API calls and parse that; the default table output is for humans. On paginated `list` calls, add `--all` only when `--help` exposes it. Some list-like commands differ: for example, `compute image list-public` requires `--region` and has no `--all`. Never pass `-i`/`--interactive`: it opens interactive entry or alternate-screen pagination and hangs unattended sessions. Never pass `--follow` (e.g. `compute instance logs --follow`, `logging query --follow`): it streams until killed and hangs an unattended session the same way.
 
 **Editing.** Never run `edit` or `edit-by-name`: they open `$EDITOR` and hang in a non-interactive shell. Use `update` with explicit flags or `update -f <file>` instead.
 
@@ -81,16 +83,18 @@ Compute and quota commands are **project**-scoped; capacity advice, capacity blo
 ## The provisioning workflow (follow in order, no skipping)
 
 1. **Gather requirements.** Resource type, name, project (`PROJECT=$(nebius config get parent-id)` unless the user names one), and for instances: platform + preset, boot image, subnet. Anything missing → ask, don't default silently.
-2. **Preflight — all three, before writing any spec:**
+2. **Preflight what applies, before writing any spec:**
    ```bash
-   # (a) valid platform/preset names in this region
+   # Instances: valid platform/preset names in the project's region
    nebius compute platform list --parent-id "$PROJECT" --format json --all
-   # (b) physical capacity (tenant-scoped!)
+
+   # GPU instances only: current, non-guaranteed capacity advice (tenant-scoped)
    nebius capacity resource-advice list --parent-id "$(nebius config get tenant-id)" --format json --all
-   # (c) project quota headroom
+
+   # All resources: inspect the relevant project quota headroom
    nebius quotas quota-allowance list --parent-id "$PROJECT" --format json --all
    ```
-   If capacity or quota can't cover the request, stop and report — do not create a resource that will sit unschedulable.
+   Capacity Advisor covers GPU VMs, not CPU-only VMs, disks, filesystems, or GPU-cluster resources. For a GPU VM, report `available`, `availability_level`, `data_state`, and `effective_at`; explain that advice is a timestamped estimate, not a launch guarantee. If an applicable quota cannot cover the request, or GPU advice reports no launchable capacity, stop and report.
 3. **Estimate cost** where the calculator supports the resource, e.g. for a disk:
    ```bash
    nebius billing v1alpha1 calculator estimate \
@@ -107,7 +111,7 @@ Compute and quota commands are **project**-scoped; capacity advice, capacity blo
 Never `edit`/`edit-by-name` ($EDITOR hang). Two safe options:
 
 - **Small change** — explicit flags: `nebius compute disk update <id> --size-gibibytes 1000` (updates only named fields).
-- **File-driven** — `update -f <file>` implies `--full`: the file **replaces** the whole spec. Always start from current state: `nebius compute disk get <id> --format yaml > disk.yaml`, edit that, submit it back. Keep `metadata.resource_version` from the `get` so a concurrent change fails loudly instead of being overwritten.
+- **File-driven** — `update -f <file>` implies `--full`: the file **replaces** the whole spec. Start from `get --format yaml`, but build an update request containing only the fields accepted by `update --help` (normally `metadata` and `spec`); remove `status` and other output-only fields. Keep `metadata.id` and `metadata.resource_version` so a concurrent change fails loudly instead of being overwritten.
 
 Both are Tier B: preview → confirm → run once → verify.
 

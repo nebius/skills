@@ -29,7 +29,7 @@ Full rationale: [skills/nebius-cloud-basics/references/safety-tiers.md](skills/n
 
 ## Install
 
-Prerequisite everywhere: `nebius` CLI ≥ 0.12 with a configured profile ([docs](https://docs.nebius.com/cli)).
+Prerequisite everywhere: `nebius` CLI ≥ 0.12.247 with a configured profile ([docs](https://docs.nebius.com/cli)).
 
 ### Claude Code
 

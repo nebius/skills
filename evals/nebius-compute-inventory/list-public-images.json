@@ -1,0 +1,13 @@
+{
+  "skills": [
+    "nebius-cloud-basics",
+    "nebius-compute-inventory"
+  ],
+  "query": "show me the public boot images available in eu-north1",
+  "expected_behavior": [
+    "Runs nebius compute image list-public --region eu-north1 --format json",
+    "Does not pass --parent-id or --all to image list-public",
+    "Treats the result as region-scoped rather than project-scoped",
+    "Runs nothing mutating"
+  ]
+}

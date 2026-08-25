@@ -12,6 +12,6 @@ spec:
   # block_size_bytes: 4096             # power of two, 4096..131072; default 4096
   # source_image_id: computeimage-...          # bootable disk from a specific image
   # source_image_family:                       # …or newest image of a family
-  #   image_family: ubuntu22.04-driverless
+  #   image_family: <image-family>             # discover for the project's region; do not hard-code a stale family
   # source_snapshot_id: ...                    # …or restore from a snapshot
   # forbid_deletion: true              # guard-rail: blocks deletion while set

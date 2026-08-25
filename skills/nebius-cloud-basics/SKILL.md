@@ -2,7 +2,7 @@
 name: nebius-cloud-basics
 description: Foundation for the nebius CLI. Check before any other Nebius task, or if the CLI is not installed or configured, or a nebius command needs the right profile, --parent-id, or output format, or fails with an unclear error.
 license: Apache-2.0
-compatibility: Requires the nebius CLI (>=0.12) with a configured profile; jq recommended
+compatibility: Requires the nebius CLI (>=0.12.247) with a configured profile; jq recommended
 metadata:
   version: "0.1.0"
 allowed-tools:
@@ -34,7 +34,9 @@ nebius config get parent-id    # project-...
 nebius config get tenant-id    # tenant-...
 ```
 
-If any of these fails or comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and `profile create` opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call, and re-auth is the same human task.
+These skills require CLI `0.12.247` or newer. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
+
+If any check fails or an ID comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and the shown federation-profile command opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call, and re-auth is the same human task.
 
 **Resolve context first — never guess IDs.** Nearly every call needs `--parent-id`, and the CLI does not say which scope it wants:
 
@@ -44,9 +46,9 @@ nebius config get parent-id  [-p <profile>]   # project-...  (project scope)
 nebius config get tenant-id  [-p <profile>]   # tenant-...   (tenant scope)
 ```
 
-Compute and quota commands are **project**-scoped; capacity advice, capacity block groups, and capacity intervals are **tenant**-scoped. The wrong scope returns empty lists or permission errors, not a helpful message. Pass `-p <profile>` explicitly whenever the user names a profile.
+Compute resources are generally **project**-scoped; public-image discovery is region-scoped. Quota allowances may be project- or tenant-scoped. Capacity advice, capacity block groups, and capacity intervals are **tenant**-scoped. The wrong scope often returns empty lists or permission errors, not a helpful message. Pass `-p <profile>` explicitly whenever the user names a profile.
 
-**Output.** Add `--format json` to every call and parse that; the default table output is for humans. On `list` calls add `--all` to disable paging. Never pass `-i`/`--interactive`: it opens alternate-screen pagination and hangs unattended sessions. Never pass `--follow` (e.g. `compute instance logs --follow`, `logging query --follow`): it streams until killed and hangs an unattended session the same way.
+**Output.** Add `--format json` to API calls and parse that; the default table output is for humans. On paginated `list` calls, add `--all` only when `--help` exposes it. Some list-like commands differ: for example, `compute image list-public` requires `--region` and has no `--all`. Never pass `-i`/`--interactive`: it opens interactive entry or alternate-screen pagination and hangs unattended sessions. Never pass `--follow` (e.g. `compute instance logs --follow`, `logging query --follow`): it streams until killed and hangs an unattended session the same way.
 
 **Editing.** Never run `edit` or `edit-by-name`: they open `$EDITOR` and hang in a non-interactive shell. Use `update` with explicit flags or `update -f <file>` instead.
 
@@ -82,7 +84,8 @@ Some profiles have no `parent-id` or `tenant-id` configured — `config get` the
 
 | Command family | Scope to pass |
 |---|---|
-| `compute *` (instances, disks, filesystems, gpu-clusters, images, platforms) | project (`project-...`) |
+| `compute *` (instances, disks, filesystems, gpu-clusters, project images, platforms) | project (`project-...`) |
+| `compute image list-public` | region via required `--region`; no `--parent-id` or `--all` |
 | `quotas quota-allowance *` | project (or tenant for tenant-wide quotas) |
 | `capacity resource-advice list` | **tenant** (`tenant-...`) — required to compute quota-clipped availability |
 | `capacity capacity-block-group *`, `capacity capacity-interval *` | **tenant** |

@@ -1,0 +1,13 @@
+{
+  "skills": [
+    "nebius-cloud-basics",
+    "nebius-compute-provision"
+  ],
+  "query": "create a cpu-d3 VM with 4 vCPUs in the testing project",
+  "expected_behavior": [
+    "Checks the project platform/preset and relevant project quotas",
+    "Does not call capacity resource-advice for this CPU-only VM because Capacity Advisor covers GPU VMs",
+    "Asks for missing boot image or disk and subnet rather than inventing them",
+    "Prints the resolved create request and waits for explicit confirmation before executing"
+  ]
+}
