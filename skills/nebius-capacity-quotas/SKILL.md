@@ -86,10 +86,28 @@ nebius capacity resource-advice list --parent-id "$TENANT" --format json --all
 
 Each advice entry is one (region, fabric, platform, preset) combination reporting current availability for three allocation types: **reserved**, **on-demand**, **preemptible** — already clipped by the tenant's quotas.
 
+## Where region, platform, and preset names come from
+
+Never type one from memory, and never go hunting for a catalogue — the CLI has no region-listing command anywhere in its tree. One call enumerates every valid combination:
+
+```bash
+nebius capacity resource-advice list --parent-id "$TENANT" --format json --all \
+  | jq -r '.items[] | [.spec.region, .spec.compute_instance.platform, .spec.compute_instance.preset.name] | @tsv' \
+  | sort -u
+```
+
+Run this **once** per session and reuse the output — the workflow below needs the same call. Expected shapes: region `us-central1-b`, platform `gpu-b200-sxm`, preset `8gpu-160vcpu-1792gb`.
+
+- `nebius compute platform list --parent-id "$PROJECT" --format json --all` answers "which presets exist for platform X" from the project side. It says nothing about availability.
+- **Two region vocabularies — never translate between them by hand.** Capacity regions carry a location suffix (`us-central1-b`); quota `--region` takes the plain form (`eu-north1`). Take each from its own source: capacity from `resource-advice`, quota from `quota-allowance list` output. A capacity region passed to a quota lookup returns nothing, not an error.
+- `resource-advice list --help` claims it "supports filtering by region, resource type, or platform", but exposes no filter flags. Filtering is client-side jq only.
+
+If the user's region or platform isn't in the enumeration, say so, show what is, and ask one question. Don't widen the search.
+
 ## Workflow: "Can I launch 8×B200 in us-central1-b?"
 
 1. Resolve context: `TENANT=$(nebius config get tenant-id)`, `PROJECT=$(nebius config get parent-id)`.
-2. Pull advice and filter (platform/region names are data, not guesses — read them from the output):
+2. Pull advice and filter. The `b200` and `us-central1` literals below are **placeholders** — substitute the real values from the enumeration above (see *Where region, platform, and preset names come from*); never copy these through:
    ```bash
    nebius capacity resource-advice list --parent-id "$TENANT" --format json --all \
      | jq '.items[] | select((.spec.compute_instance.platform | test("b200")) and (.spec.region | test("us-central1")))'
