@@ -1,12 +1,12 @@
 ---
 name: nebius-compute-inventory
 description: Read-only inventory of Nebius Compute. Use for "list instances", "show disks", "find the GPU cluster", "which platforms and presets exist", "what images can I boot" - any question about what exists.
-
 license: Apache-2.0
 compatibility: Requires the nebius CLI (>=0.12) with a configured profile; jq recommended
 metadata:
   version: "0.1.0"
 allowed-tools:
+  - Bash(nebius version:*)
   - Bash(nebius profile list:*)
   - Bash(nebius profile current:*)
   - Bash(nebius config get:*)
@@ -48,6 +48,17 @@ Answer "what exists?" across Nebius Compute — instances, disks, filesystems, G
 ## Nebius CLI ground rules
 
 These rules apply to every command in this skill. Full detail lives in the `nebius-cloud-basics` skill.
+
+**CLI present and configured.** Before the first Nebius call in a session:
+
+```bash
+nebius version                 # CLI installed (a subcommand — there is no --version flag)
+nebius profile list            # at least one profile; [default] marks the active one
+nebius config get parent-id    # project-...
+nebius config get tenant-id    # tenant-...
+```
+
+If any of these fails or comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and `profile create` opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call, and re-auth is the same human task.
 
 **Resolve context first — never guess IDs.** Nearly every call needs `--parent-id`, and the CLI does not say which scope it wants:
 
