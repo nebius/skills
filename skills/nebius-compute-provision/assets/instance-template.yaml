@@ -5,6 +5,11 @@
 # kebab-case flag -> snake_case field, flag prefix -> nesting
 # (--resources-platform -> spec.resources.platform). When unsure, verify
 # against a live instance: `nebius compute instance get <id> --format yaml`.
+#
+# Enum values below use the lowercase form the create flags accept
+# (`--recovery-policy` takes recover|fail|always). Whether `create -f` also
+# accepts the uppercase API form is not verified — confirm with one gated
+# `create -f` on a testing profile before relying on it.
 metadata:
   parent_id: project-e00example        # REQUIRED — target project NID
   name: my-instance                    # human-readable, unique per project
@@ -43,5 +48,5 @@ spec:
   # preemptible:
   #   on_preemption: stop              # only supported value
   #   priority: 1
-  # recovery_policy: RECOVER           # RECOVER | FAIL | ALWAYS (ALWAYS: nvl-instance-group only)
+  # recovery_policy: recover           # recover | fail | always (always: nvl-instance-group only)
   # stopped: true                      # create without starting

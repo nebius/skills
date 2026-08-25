@@ -17,7 +17,7 @@
 5. **Degrees of freedom match fragility**: inventory/read work gets high-freedom prose; provisioning gets a low-freedom numbered workflow with exact command sequences.
 6. **`compatibility`** states the real prerequisite (e.g. `Requires the nebius CLI (>=0.12) with a configured profile; jq recommended`).
 7. **Templates over flag soup**: every `create` path ships a commented YAML request template in `assets/`, used as `nebius <svc> <res> create -f <file>`.
-8. **`allowed-tools` enumerates read-only command prefixes only** — never `Bash(nebius:*)`, which would pre-approve `delete`. Mutations must go through the client's normal permission flow.
+8. **`allowed-tools` enumerates read-only command prefixes only** — never `Bash(nebius:*)`, which would pre-approve `delete`. Mutations must go through the client's normal permission flow. Nothing outside `nebius` belongs there either: `Bash(jq:*)` would pre-approve `jq . ~/.nebius/credentials.json`, so jq stays on the normal permission flow (a pipe whose left side is allowed still only prompts once).
 9. **No time-sensitive statements** in skill bodies. Deprecations go in a collapsed "Old patterns" section with their sunset date.
 10. **No secrets, no real IDs**: never print/persist tokens or keys; never commit real tenant/project NIDs — templates use `project-e00example` style placeholders (the lint checks this).
 

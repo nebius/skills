@@ -13,7 +13,7 @@ Each resource family has an `operation` subgroup:
 
 ```bash
 nebius compute instance operation get <operation-id> --format json
-nebius compute instance operation list --id <instance-id> --format json   # operations on one resource
+nebius compute instance operation list --resource-id <instance-id> --format json   # operations on one resource (flag is --resource-id, not --id)
 nebius compute instance operation wait <operation-id> --format json       # block until done
 nebius compute instance list-operations-by-parent --parent-id "$PROJECT" --format json  # recent activity in a project
 ```

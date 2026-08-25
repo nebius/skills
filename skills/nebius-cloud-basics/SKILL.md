@@ -13,7 +13,6 @@ allowed-tools:
   - Bash(nebius config get:*)
   - Bash(nebius config list:*)
   - Bash(nebius iam whoami:*)
-  - Bash(jq:*)
 ---
 
 # Nebius Cloud Basics
@@ -47,7 +46,7 @@ nebius config get tenant-id  [-p <profile>]   # tenant-...   (tenant scope)
 
 Compute and quota commands are **project**-scoped; capacity advice, capacity block groups, and capacity intervals are **tenant**-scoped. The wrong scope returns empty lists or permission errors, not a helpful message. Pass `-p <profile>` explicitly whenever the user names a profile.
 
-**Output.** Add `--format json` to every call and parse that; the default table output is for humans. On `list` calls add `--all` to disable paging. Never pass `-i`/`--interactive`: it opens alternate-screen pagination and hangs unattended sessions.
+**Output.** Add `--format json` to every call and parse that; the default table output is for humans. On `list` calls add `--all` to disable paging. Never pass `-i`/`--interactive`: it opens alternate-screen pagination and hangs unattended sessions. Never pass `--follow` (e.g. `compute instance logs --follow`, `logging query --follow`): it streams until killed and hangs an unattended session the same way.
 
 **Editing.** Never run `edit` or `edit-by-name`: they open `$EDITOR` and hang in a non-interactive shell. Use `update` with explicit flags or `update -f <file>` instead.
 
@@ -59,7 +58,7 @@ Compute and quota commands are **project**-scoped; capacity advice, capacity blo
 |---|---|---|
 | A — read | `list`, `get`, `get-by-name`, `batch-get`, `list-*`, `logs`, `--help` | Run freely. |
 | B — gated write | `create`, `update`, `start`, `stop`, quota/capacity allowance changes | Print the fully resolved command verbatim, state what it changes and the cost implication, wait for explicit user confirmation, then run it exactly once. Never batch mutations; never retry one after an ambiguous failure. |
-| C — refuse | `delete`, `purge`, credential issuance (`iam get-access-token`, access keys), `--impersonate-service-account-id` | Do not run. Print the exact command for the human to run themselves and explain the blast radius. |
+| C — refuse | `delete`, `purge`, credential issuance (`iam get-access-token`, access keys), `-I`/`--impersonate-service-account-id` (a global flag, valid on *every* command — including otherwise-free reads) | Do not run. Print the exact command for the human to run themselves and explain the blast radius. |
 
 **Secrets.** Never print or persist tokens, access keys, or the contents of `~/.nebius/credentials.json`.
 <!-- END SHARED PREAMBLE -->
@@ -69,7 +68,7 @@ Compute and quota commands are **project**-scoped; capacity advice, capacity blo
 The four checks in the preamble above establish that the CLI, a profile, and both IDs exist. Two more are worth running before acting:
 
 ```bash
-nebius profile current --format json   # profile actually in effect (can differ from [default])
+nebius profile current                 # profile actually in effect (can differ from [default]); prints a bare name, --format is ignored
 nebius iam whoami --format json        # the session's token still works
 ```
 

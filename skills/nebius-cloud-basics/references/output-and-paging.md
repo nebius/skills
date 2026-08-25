@@ -35,4 +35,4 @@ List calls take `--page-size` (often capped at 1000) and `--page-token`, and ret
 - Only page manually (`--page-size` + `--page-token` loop) when a list is huge and you need to stop early.
 - **Never** pass `-i`/`--interactive`: it renders pages on an alternate screen and waits for keypresses — an unattended session hangs forever.
 
-The same applies to any streaming/following mode (e.g. `logging query --follow` in other service families): always use bounded queries.
+The same applies to any streaming/following mode — `compute instance logs --follow`, and `logging query --follow` in other service families: always use bounded queries.

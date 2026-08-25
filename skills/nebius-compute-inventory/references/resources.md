@@ -9,8 +9,8 @@ Verbs verified against nebius CLI 0.12.x. Trust `nebius compute <resource> --hel
 | `filesystem` | `list`, `get`, `get-by-name`, `list-operations-by-parent` | Types: `network_ssd`, `network_hdd`, `weka`. Shared between instances; attachment shown on the instance spec. |
 | `gpu-cluster` | `list`, `get`, `get-by-name`, `list-operations-by-parent` | Groups instances on one InfiniBand fabric (`spec.infiniband_fabric`). Membership is on the instance (`spec.gpu_cluster`). |
 | `image` | `list`, `list-public`, `get`, `get-by-name`, `get-latest-by-family`, `list-operations-by-parent` | Project images via `list`; OS marketplace images via `list-public`. `get-latest-by-family` resolves a family (e.g. ubuntu) to its newest image. |
-| `platform` | `list`, `get` | Hardware platforms + their presets (vCPU/RAM/GPU combos). The authoritative source for valid `--resources-platform`/`--resources-preset` values in this region. |
-| `node` | `list`, `get` | Physical-node view where exposed. Mutating verb `set-unhealthy` exists on some versions — that is Tier B at minimum; not an inventory concern. |
+| `platform` | `list`, `get-by-name` | Hardware platforms + their presets (vCPU/RAM/GPU combos). The authoritative source for valid `--resources-platform`/`--resources-preset` values in this region. There is **no** `platform get` — look a platform up by name (`get-by-name --parent-id ... --name ...`). |
+| `node` | *(none)* | 0.12.x exposes exactly one verb on `node`, the mutation `set-unhealthy` (Tier B at minimum) — there is no `node list`/`node get`. Not an inventory concern. |
 | `nvl-instance-group` | `list`, `get` | NVLink instance groups (GB200/NVL-class). Use `instance list-instances-by-nvl-instance-group` to see members. |
 
 ## Field paths worth knowing

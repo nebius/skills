@@ -32,17 +32,14 @@ allowed-tools:
   - Bash(nebius compute image get-by-name:*)
   - Bash(nebius compute image get-latest-by-family:*)
   - Bash(nebius compute platform list:*)
-  - Bash(nebius compute platform get:*)
-  - Bash(nebius compute node list:*)
-  - Bash(nebius compute node get:*)
+  - Bash(nebius compute platform get-by-name:*)
   - Bash(nebius compute nvl-instance-group list:*)
   - Bash(nebius compute nvl-instance-group get:*)
-  - Bash(jq:*)
 ---
 
 # Nebius Compute Inventory
 
-Answer "what exists?" across Nebius Compute — instances, disks, filesystems, GPU clusters, images, platforms, nodes, NVLink instance groups — without ever mutating anything.
+Answer "what exists?" across Nebius Compute — instances, disks, filesystems, GPU clusters, images, platforms, NVLink instance groups — without ever mutating anything.
 
 <!-- BEGIN SHARED PREAMBLE (generated from shared/preamble.md — edit there, then run scripts/sync-shared.py) -->
 ## Nebius CLI ground rules
@@ -70,7 +67,7 @@ nebius config get tenant-id  [-p <profile>]   # tenant-...   (tenant scope)
 
 Compute and quota commands are **project**-scoped; capacity advice, capacity block groups, and capacity intervals are **tenant**-scoped. The wrong scope returns empty lists or permission errors, not a helpful message. Pass `-p <profile>` explicitly whenever the user names a profile.
 
-**Output.** Add `--format json` to every call and parse that; the default table output is for humans. On `list` calls add `--all` to disable paging. Never pass `-i`/`--interactive`: it opens alternate-screen pagination and hangs unattended sessions.
+**Output.** Add `--format json` to every call and parse that; the default table output is for humans. On `list` calls add `--all` to disable paging. Never pass `-i`/`--interactive`: it opens alternate-screen pagination and hangs unattended sessions. Never pass `--follow` (e.g. `compute instance logs --follow`, `logging query --follow`): it streams until killed and hangs an unattended session the same way.
 
 **Editing.** Never run `edit` or `edit-by-name`: they open `$EDITOR` and hang in a non-interactive shell. Use `update` with explicit flags or `update -f <file>` instead.
 
@@ -82,7 +79,7 @@ Compute and quota commands are **project**-scoped; capacity advice, capacity blo
 |---|---|---|
 | A — read | `list`, `get`, `get-by-name`, `batch-get`, `list-*`, `logs`, `--help` | Run freely. |
 | B — gated write | `create`, `update`, `start`, `stop`, quota/capacity allowance changes | Print the fully resolved command verbatim, state what it changes and the cost implication, wait for explicit user confirmation, then run it exactly once. Never batch mutations; never retry one after an ambiguous failure. |
-| C — refuse | `delete`, `purge`, credential issuance (`iam get-access-token`, access keys), `--impersonate-service-account-id` | Do not run. Print the exact command for the human to run themselves and explain the blast radius. |
+| C — refuse | `delete`, `purge`, credential issuance (`iam get-access-token`, access keys), `-I`/`--impersonate-service-account-id` (a global flag, valid on *every* command — including otherwise-free reads) | Do not run. Print the exact command for the human to run themselves and explain the blast radius. |
 
 **Secrets.** Never print or persist tokens, access keys, or the contents of `~/.nebius/credentials.json`.
 <!-- END SHARED PREAMBLE -->
@@ -94,7 +91,7 @@ PROJECT=$(nebius config get parent-id)   # or the project the user names
 nebius compute <resource> list --parent-id "$PROJECT" --format json --all
 ```
 
-Resources: `instance`, `disk`, `filesystem`, `gpu-cluster`, `image`, `platform`, `node`, `nvl-instance-group`. Read verbs on each: `list`, `get <id>`, `get-by-name --parent-id ... --name ...`, plus per-resource extras (see [references/resources.md](references/resources.md)).
+Resources: `instance`, `disk`, `filesystem`, `gpu-cluster`, `image`, `platform`, `nvl-instance-group`. Read verbs on most: `list`, `get <id>`, `get-by-name --parent-id ... --name ...`, plus per-resource extras — but the set varies (`platform` has no `get`; `node` has no read verbs at all). See [references/resources.md](references/resources.md).
 
 List responses put resources in `.items[]`, each with `metadata` (id, name, labels), `spec` (desired config), `status` (observed state). Before extracting fields programmatically, run one `get --format yaml` and read the actual field names — the API is versioned and field layouts are ground truth, not memory.
 
