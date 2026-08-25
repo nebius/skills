@@ -1,6 +1,7 @@
 ---
 name: nebius-compute-provision
-description: Gated provisioning for Nebius Compute - create or update VM instances, disks, filesystems, and GPU clusters from reviewed YAML templates with capacity, quota, and cost preflight, plus gated start/stop. Use for "create a VM", "provision a GPU cluster", "launch 8xH200", "resize this disk", "add a filesystem", "stop that instance". Always previews the exact command and waits for explicit user confirmation before any mutation; never deletes resources - deletion commands are printed for the human to run, never executed.
+description: Gated provisioning for Nebius Compute. Use for "create a VM", "provision a GPU cluster", "launch 8xH200", "resize this disk", "add a filesystem", "stop that instance" - any create, update, start, or stop.
+
 license: Apache-2.0
 compatibility: Requires the nebius CLI (>=0.12) with a configured profile; jq recommended
 metadata:

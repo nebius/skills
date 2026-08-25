@@ -1,6 +1,6 @@
 ---
 name: nebius-cloud-basics
-description: Foundation for operating Nebius AI Cloud with the nebius CLI. Use before any other Nebius task and whenever a nebius command needs the right profile, --parent-id, tenant-id, output format, pagination, or fails with an unclear error. Covers profile and context resolution, project vs tenant scoping, JSON output and paging, waiting on async operations, error decoding, the read/gated/refuse safety tiers, and the CLI hazards that hang agents (edit, interactive paging). Consult for any nebius CLI question the other nebius-* skills don't cover.
+description: Foundation for the nebius CLI. Check before any other Nebius task, or if a nebius command needs the right profile, --parent-id, or output format, or fails with an unclear error.
 license: Apache-2.0
 compatibility: Requires the nebius CLI (>=0.12) with a configured profile; jq recommended
 metadata:
@@ -18,6 +18,7 @@ allowed-tools:
 
 # Nebius Cloud Basics
 
+Consult this skill for any nebius CLI question the other `nebius-*` skills don't cover.
 Everything the other `nebius-*` skills assume: how to pick a profile, resolve the right `--parent-id`, get machine-readable output, wait on operations, and stay inside the safety tiers.
 
 <!-- BEGIN SHARED PREAMBLE (generated from shared/preamble.md — edit there, then run scripts/sync-shared.py) -->

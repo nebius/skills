@@ -1,6 +1,7 @@
 ---
 name: nebius-compute-inventory
-description: Read-only inventory of Nebius Compute resources - list and inspect VM instances, disks, filesystems, GPU clusters, images, platforms, nodes, and NVLink instance groups with their state, IDs, labels, sizes, and attachments. Use for "list instances", "what VMs are running", "show disks", "find the GPU cluster", "which platforms and presets exist", "read instance logs", or any read-only question about what exists in a Nebius project. Never creates, modifies, or deletes anything - for provisioning use nebius-compute-provision.
+description: Read-only inventory of Nebius Compute. Use for "list instances", "show disks", "find the GPU cluster", "which platforms and presets exist", "what images can I boot" - any question about what exists.
+
 license: Apache-2.0
 compatibility: Requires the nebius CLI (>=0.12) with a configured profile; jq recommended
 metadata:

@@ -1,6 +1,6 @@
 ---
 name: nebius-capacity-quotas
-description: Answers "can I launch N GPUs on Nebius?" - checks free GPU capacity with capacity resource-advice (tenant-scoped, reports reserved/on-demand/preemptible availability per region, platform, and preset), inspects capacity block groups, intervals, and allowances, and reads or requests quota allowances. Use for GPU capacity, free capacity, availability questions like "8xB200 in us-central1-b", quota limits, quota usage, quota increase requests, and reservation contents. Read-only except gated quota/allowance changes.
+description: Capacity and quota checks for Nebius. Use for "can I launch 8xB200 in us-central1-b", "where is available free GPU capacity", "how much quota do I have", "what's in our reservation", "request a quota increase" - any capacity or quota question.
 license: Apache-2.0
 compatibility: Requires the nebius CLI (>=0.12) with a configured profile; jq recommended
 metadata:
