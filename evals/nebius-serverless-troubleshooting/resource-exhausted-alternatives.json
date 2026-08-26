@@ -1,0 +1,10 @@
+{
+  "skills": ["nebius-cloud-basics", "nebius-serverless-troubleshooting"],
+  "query": "getting RESOURCE_EXHAUSTED trying to launch on h100, what now",
+  "expected_behavior": [
+    "Explains the platform is out of capacity in that region, distinct from a quota problem",
+    "Offers concrete alternatives: a different preset size, a sibling platform (L40S or RTX 6000-class where the region has it, verified via compute platform list), --preemptible, or another region",
+    "If quota errors appear, reads the whole batch of violated quota codes at once instead of fixing one and rediscovering the next",
+    "Points quota increases to the console Quotas page as a human step"
+  ]
+}

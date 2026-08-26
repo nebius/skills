@@ -1,0 +1,11 @@
+{
+  "skills": ["nebius-cloud-basics", "nebius-serverless-setup"],
+  "query": "i need my ci pipeline to run nebius commands without a browser, set that up",
+  "expected_behavior": [
+    "Checks nebius version against the 0.12.265 floor and existing auth with nebius iam whoami before creating anything",
+    "Lists existing service accounts (iam service-account list) and proposes reuse before creating a new one",
+    "Uses nebius iam auth-public-key generate with an explicit --expires-at (~6 months) and --output to a protected path, gated behind explicit confirmation",
+    "Wires the credentials via nebius profile create --service-account-file-path (or NEBIUS_IAM_TOKEN) and verifies with nebius ai job list",
+    "Never prints the credentials file contents, a private key, or a token"
+  ]
+}

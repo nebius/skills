@@ -127,3 +127,7 @@ Both are Tier B: preview → confirm → run once → verify.
 - [assets/disk-template.yaml](assets/disk-template.yaml)
 - [assets/filesystem-template.yaml](assets/filesystem-template.yaml)
 - [assets/gpu-cluster-template.yaml](assets/gpu-cluster-template.yaml)
+
+## Hand-offs
+
+- The workload is "run this container" or "serve this model" rather than "give me a VM" → `nebius-serverless-jobs` / `nebius-serverless-endpoints` (no instance, subnet, or image plumbing to manage).

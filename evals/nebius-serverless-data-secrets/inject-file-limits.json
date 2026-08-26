@@ -1,0 +1,10 @@
+{
+  "skills": ["nebius-cloud-basics", "nebius-serverless-data-secrets"],
+  "query": "i have a 2mb model config json the container needs at startup, inject it",
+  "expected_behavior": [
+    "Knows --inject-file is capped at 64 KiB and rejects the 2MB file for that path",
+    "Offers the S3 volume mount as the right mechanism for the larger file",
+    "States the other --inject-file constraints when relevant: read-only in the container and an absolute container path",
+    "Checks the file for embedded credentials and routes any found through --env-secret instead"
+  ]
+}

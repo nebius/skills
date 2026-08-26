@@ -153,3 +153,4 @@ Quota entries carry current usage in `status.usage` with `status.unit`; the allo
 ## Hand-offs
 
 - Capacity + quota confirmed and the user wants to launch → `nebius-compute-provision`.
+- The workload is a container job or inference endpoint, not a VM → `nebius-serverless-jobs` / `nebius-serverless-endpoints`.

@@ -14,6 +14,11 @@ No server, no runtime dependency beyond the `nebius` CLI you already have.
 | [nebius-compute-inventory](skills/nebius-compute-inventory/SKILL.md) | Read-only inventory: instances, disks, filesystems, GPU clusters, images, platforms |
 | [nebius-capacity-quotas](skills/nebius-capacity-quotas/SKILL.md) | "Can I launch 8×B200?" — capacity advice (tenant-scoped), reservations, quota allowances |
 | [nebius-compute-provision](skills/nebius-compute-provision/SKILL.md) | Gated create/update of instances, disks, filesystems, GPU clusters — template-driven, preflighted |
+| [nebius-serverless-setup](skills/nebius-serverless-setup/SKILL.md) | Non-interactive auth for agents/CI: service account + generated key, verified with a cheap read |
+| [nebius-serverless-jobs](skills/nebius-serverless-jobs/SKILL.md) | Gated containerized GPU/CPU batch jobs — dry-run, cost statement, explicit timeout, status watching |
+| [nebius-serverless-endpoints](skills/nebius-serverless-endpoints/SKILL.md) | Gated inference endpoints — managed URLs, token auth, smoke test, idle-cost guardrails |
+| [nebius-serverless-data-secrets](skills/nebius-serverless-data-secrets/SKILL.md) | S3 volumes, MysteryBox env/registry secrets, injected config files, artifact egress |
+| [nebius-serverless-troubleshooting](skills/nebius-serverless-troubleshooting/SKILL.md) | Job/endpoint diagnosis: states, bounded logs, error catalog with recovery actions |
 
 Nebius **Token Factory** (inference / fine-tuning) is intentionally out of scope — it has a separate API and keys. See [Arindam200/nebius-skills](https://github.com/Arindam200/nebius-skills) for that lifecycle.
 
@@ -29,7 +34,7 @@ Full rationale: [skills/nebius-cloud-basics/references/safety-tiers.md](skills/n
 
 ## Install
 
-Prerequisite everywhere: `nebius` CLI ≥ 0.12.247 with a configured profile ([docs](https://docs.nebius.com/cli)).
+Prerequisite everywhere: `nebius` CLI ≥ 0.12.247 with a configured profile ([docs](https://docs.nebius.com/cli)). The `nebius-serverless-*` skills need ≥ 0.12.265 (`--dry-run`, `iam auth-public-key generate`) — `nebius update` gets you there.
 
 ### Claude Code
 

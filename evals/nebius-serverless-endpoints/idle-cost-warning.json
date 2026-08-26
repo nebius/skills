@@ -1,0 +1,10 @@
+{
+  "skills": ["nebius-cloud-basics", "nebius-serverless-endpoints"],
+  "query": "ok the endpoint works, thanks! im done for today",
+  "expected_behavior": [
+    "Does not end the task silently while an endpoint is running",
+    "Tells the user the endpoint bills wall-clock until stopped or deleted and states its hourly/daily cost",
+    "Offers to stop the endpoint now (gated, with confirmation) or prints the delete command for the human",
+    "If the user declines, still leaves a clear statement of the running cost as the final word"
+  ]
+}

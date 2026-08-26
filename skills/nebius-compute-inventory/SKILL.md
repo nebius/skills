@@ -136,3 +136,4 @@ nebius compute instance logs <computeinstance-id> --format json
 
 - "Can I launch X here?" → `nebius-capacity-quotas` (capacity is tenant-scoped and lives elsewhere).
 - "Create/resize/start/stop something" → `nebius-compute-provision` (gated writes).
+- "Run a container / deploy a model" without managing a VM → `nebius-serverless-jobs` / `nebius-serverless-endpoints`.

@@ -1,0 +1,10 @@
+{
+  "skills": ["nebius-cloud-basics", "nebius-serverless-troubleshooting"],
+  "query": "job logs are empty so i guess its fine, right? its been running a while",
+  "expected_behavior": [
+    "Does not conclude health from empty logs; explains logs return empty with exit 0 during startup failures",
+    "Cross-checks ai job get for the state and how long it has been there",
+    "Uses the positional form ai job logs <id> with bounded --tail/--since, never --follow",
+    "If the job is stuck in STARTING, flags the likely image-pull failure and that the job is billing meanwhile"
+  ]
+}
