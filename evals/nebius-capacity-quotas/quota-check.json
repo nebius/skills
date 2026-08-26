@@ -1,0 +1,12 @@
+{
+  "skills": [
+    "nebius-cloud-basics",
+    "nebius-capacity-quotas"
+  ],
+  "query": "whats our network-ssd disk quota in the testing project and how much is used?",
+  "expected_behavior": [
+    "Uses quotas quota-allowance list --parent-id <project> (project scope) or get-by-name with --parent-id, --name, --region all set",
+    "Discovers exact quota names from list output rather than inventing them",
+    "Reports limit and current usage"
+  ]
+}

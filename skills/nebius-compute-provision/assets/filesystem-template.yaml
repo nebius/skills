@@ -1,0 +1,11 @@
+# Nebius shared filesystem — create request template
+# Usage: `nebius compute filesystem create -f filesystem.yaml`
+metadata:
+  parent_id: project-e00example        # REQUIRED — target project NID
+  name: my-filesystem
+  labels: {}
+spec:
+  type: network_ssd                    # REQUIRED: network_ssd | network_hdd | weka | vast
+  size_gibibytes: 1024                 # exactly one size_* field
+  # block_size_bytes: 4096
+# Attachment happens on the instance (spec.filesystems), not here.

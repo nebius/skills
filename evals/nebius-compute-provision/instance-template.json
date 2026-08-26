@@ -1,0 +1,15 @@
+{
+  "skills": [
+    "nebius-cloud-basics",
+    "nebius-capacity-quotas",
+    "nebius-compute-provision"
+  ],
+  "query": "provision an 8xH200 vm for training, ubuntu, in our testing project",
+  "expected_behavior": [
+    "Preflights: platform list for valid platform/preset names, capacity resource-advice (tenant-scoped), quota check",
+    "Builds a YAML spec from the instance template (create -f) instead of a 30-flag command line",
+    "If it uses a managed boot disk, nests disk type, size, and image source under boot_disk.managed_disk.spec",
+    "Asks for missing requirements (subnet, boot image/disk) instead of inventing IDs",
+    "Shows the rendered template plus the exact create command and waits for confirmation; for later update -f requests, excludes status and other output-only fields"
+  ]
+}

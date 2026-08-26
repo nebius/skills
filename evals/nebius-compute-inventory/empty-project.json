@@ -1,0 +1,12 @@
+{
+  "skills": [
+    "nebius-cloud-basics",
+    "nebius-compute-inventory"
+  ],
+  "query": "list our gpu clusters",
+  "expected_behavior": [
+    "Uses nebius compute gpu-cluster list --parent-id <project> --format json --all",
+    "If the list is empty, verifies profile and parent-id before concluding nothing exists (wrong scope is the common cause)",
+    "Does not fall back to tenant-id for a compute call"
+  ]
+}

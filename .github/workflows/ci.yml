@@ -1,0 +1,28 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Shared preamble sync check
+        run: python3 scripts/sync-shared.py --check
+      - name: Frontmatter / portability lint
+        run: python3 scripts/check-frontmatter.py
+      - name: Agent Skills spec validation
+        run: |
+          for d in skills/*/; do
+            npx --yes skills-ref validate "$d"
+          done
+      - name: Claude Code plugin validation (strict)
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          claude plugin validate . --strict

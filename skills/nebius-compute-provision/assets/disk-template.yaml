@@ -1,0 +1,17 @@
+# Nebius disk — create request template
+# Usage: `nebius compute disk create -f disk.yaml`
+# (For a disk, explicit flags are equally fine:
+#  nebius compute disk create --parent-id <project> --name <n> --type network_ssd --size-gibibytes 500)
+metadata:
+  parent_id: project-e00example        # REQUIRED — target project NID
+  name: my-disk
+  labels: {}
+spec:
+  type: network_ssd                    # REQUIRED: network_ssd | network_hdd | network_ssd_non_replicated | network_ssd_io_m3
+  size_gibibytes: 500                  # exactly one size_* field (bytes|kibibytes|mebibytes|gibibytes)
+  # block_size_bytes: 4096             # power of two, 4096..131072; default 4096
+  # source_image_id: computeimage-...          # bootable disk from a specific image
+  # source_image_family:                       # …or newest image of a family
+  #   image_family: <image-family>             # discover for the project's region; do not hard-code a stale family
+  # source_snapshot_id: ...                    # …or restore from a snapshot
+  # forbid_deletion: true              # guard-rail: blocks deletion while set

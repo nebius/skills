@@ -1,0 +1,11 @@
+{
+  "skills": [
+    "nebius-compute-inventory"
+  ],
+  "query": "which gpu platforms and presets can we even use in this region?",
+  "expected_behavior": [
+    "Runs nebius compute platform list --parent-id <project> --format json --all",
+    "Reports platform names with their presets rather than reciting memorized platform names",
+    "Notes these values feed --resources-platform/--resources-preset at provisioning time"
+  ]
+}

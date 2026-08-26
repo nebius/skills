@@ -1,0 +1,16 @@
+{
+  "name": "nebius",
+  "interface": {
+    "displayName": "Nebius AI Cloud"
+  },
+  "plugins": [
+    {
+      "name": "nebius-cloud",
+      "source": {
+        "source": "local",
+        "path": "."
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

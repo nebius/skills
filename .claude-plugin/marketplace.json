@@ -1,0 +1,19 @@
+{
+  "name": "nebius",
+  "owner": {
+    "name": "Nebius"
+  },
+  "metadata": {
+    "description": "Agent skills for operating Nebius AI Cloud from the nebius CLI",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "nebius-cloud",
+      "source": "./",
+      "description": "Operate Nebius AI Cloud resources: inventory, capacity/quota checks, gated provisioning. Read-only by default; destructive operations refused.",
+      "keywords": ["nebius", "gpu", "cloud", "capacity"],
+      "category": "devops"
+    }
+  ]
+}
