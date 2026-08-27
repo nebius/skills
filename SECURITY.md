@@ -28,4 +28,4 @@ Skills are instructions your agent will follow. Before installing this or any sk
 
 ## Reporting
 
-Report vulnerabilities or unsafe skill behavior via the repository's private security advisory channel (or to the maintainers in CODEOWNERS) rather than a public issue.
+Report vulnerabilities or unsafe skill behavior via the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/nebius/skills/security/advisories/new) tab rather than a public issue.

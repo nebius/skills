@@ -103,4 +103,6 @@ Authoring conventions live in [CONTRIBUTING.md](CONTRIBUTING.md). Key invariants
 
 ## License
 
+© 2026 Nebius BV
+
 Apache-2.0 — see [LICENSE](LICENSE).
