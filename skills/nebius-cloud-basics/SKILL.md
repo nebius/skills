@@ -60,7 +60,7 @@ Compute resources are generally **project**-scoped; public-image discovery is re
 |---|---|---|
 | A — read | `list`, `get`, `get-by-name`, `batch-get`, `list-*`, `logs`, `--help` | Run freely. |
 | B — gated write | `create`, `update`, `start`, `stop`, quota/capacity allowance changes | Print the fully resolved command verbatim, state what it changes and the cost implication, wait for explicit user confirmation, then run it exactly once. Never batch mutations; never retry one after an ambiguous failure. |
-| C — refuse | `delete`, `purge`, credential issuance (`iam get-access-token`, access keys), `-I`/`--impersonate-service-account-id` (a global flag, valid on *every* command — including otherwise-free reads) | Do not run. Print the exact command for the human to run themselves and explain the blast radius. |
+| C — refuse | `delete`, `purge`, credential issuance (`iam get-access-token`, access keys; sole exception: `iam auth-public-key generate` is Tier B), `-I`/`--impersonate-service-account-id` (a global flag, valid on *every* command — including otherwise-free reads) | Do not run. Print the exact command for the human to run themselves and explain the blast radius. |
 
 **Secrets.** Never print or persist tokens, access keys, or the contents of `~/.nebius/credentials.json`.
 <!-- END SHARED PREAMBLE -->

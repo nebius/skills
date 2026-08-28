@@ -65,7 +65,7 @@ Compute resources are generally **project**-scoped; public-image discovery is re
 |---|---|---|
 | A — read | `list`, `get`, `get-by-name`, `batch-get`, `list-*`, `logs`, `--help` | Run freely. |
 | B — gated write | `create`, `update`, `start`, `stop`, quota/capacity allowance changes | Print the fully resolved command verbatim, state what it changes and the cost implication, wait for explicit user confirmation, then run it exactly once. Never batch mutations; never retry one after an ambiguous failure. |
-| C — refuse | `delete`, `purge`, credential issuance (`iam get-access-token`, access keys), `-I`/`--impersonate-service-account-id` (a global flag, valid on *every* command — including otherwise-free reads) | Do not run. Print the exact command for the human to run themselves and explain the blast radius. |
+| C — refuse | `delete`, `purge`, credential issuance (`iam get-access-token`, access keys; sole exception: `iam auth-public-key generate` is Tier B), `-I`/`--impersonate-service-account-id` (a global flag, valid on *every* command — including otherwise-free reads) | Do not run. Print the exact command for the human to run themselves and explain the blast radius. |
 
 **Secrets.** Never print or persist tokens, access keys, or the contents of `~/.nebius/credentials.json`.
 <!-- END SHARED PREAMBLE -->
@@ -101,7 +101,7 @@ Errors print as **plain text even with `--format json`** (until MSPDEV-778) — 
 - **`RESOURCE_EXHAUSTED` / "not enough resources"** → the platform is out of capacity in that region. Offer: a different preset size, a sibling platform (L40S, or RTX 6000-class in regions that have it — verify with `nebius compute platform list`), `--preemptible`, or another region/project. Quota increases go through the console (Quotas page) — that's a human step.
 - **Quota errors** arrive **in batches** — one response can carry several violated quota codes. Read them all and address the full set; fixing one and retrying discovers the next the slow way.
 - **Authentication errors** → session or token expired; re-auth is a human step → `nebius-serverless-setup`.
-- **Unknown flag/command** → CLI drift; `nebius <cmd> --help` is ground truth, and the Serverless skills need >= 0.12.265 (`nebius update`).
+- **Unknown flag/command** → CLI drift; `nebius <cmd> --help` is ground truth, and the Serverless skills need >= 0.12.265 (ask the user to run `nebius update` — never run it yourself).
 
 ## Escalating
 
