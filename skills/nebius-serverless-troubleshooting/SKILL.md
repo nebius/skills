@@ -76,6 +76,8 @@ Compute resources are generally **project**-scoped; public-image discovery is re
 nebius ai job get --id <job-id> --format json        # or: endpoint get
 ```
 
+On a token-auth **endpoint**, pipe `get` through a jq filter (e.g. `| jq '{state: .status.state, urls: .status.public_endpoints}'`) — the raw output carries the token at `.spec.auth_token`, which must never land in the transcript.
+
 States: `PROVISIONING → STARTING → RUNNING →` terminal. Read `status.state` **and how long it has been there** — the state alone under-informs:
 
 - **`STARTING` > ~10 min** → almost certainly a failing image pull. Today `STARTING` exposes no pull progress and no pull error (MSPDEV-323), so don't wait: check the image reference exists (exact registry/path:tag), check registry auth (`--registry-secret` present for private images), then cancel and re-create via the gated skill. A broken image otherwise sits there billing until the job `--timeout` (default 24h).

@@ -95,10 +95,12 @@ Default is `--auth none` — an open endpoint on the internet. For anything beyo
 - `--token-secret <selector>` → token from MysteryBox (`AUTH_TOKEN` payload key) — the right choice for scripts; see `nebius-serverless-data-secrets`.
 - `--token <value>` → caller-supplied; fine interactively, but never write the literal into scripts or logs.
 
+**Token-auth endpoints leak through `get`.** The raw `endpoint get`/`get-by-name` output includes the token at `.spec.auth_token`. Never run those commands unfiltered on a token-auth endpoint and never echo the token — always pipe through a jq filter that selects only the fields you need (see the workflow below).
+
 ## The deploy workflow (follow in order, no skipping)
 
 1. **Requirements.** Image, port(s)+protocol, platform+preset (same catalog and discovery as jobs — see `nebius-serverless-jobs` or `nebius compute platform list`), auth choice, volumes/secrets.
-2. **Idempotency check.** `nebius ai endpoint get-by-name --name <name> --parent-id <project-id> --format json` — if it exists, report state and URL instead of double-creating (a duplicate is a second bill).
+2. **Idempotency check.** `nebius ai endpoint get-by-name --name <name> --parent-id <project-id> --format json | jq '{id: .metadata.id, state: .status.state, urls: .status.public_endpoints}'` — if it exists, report state and URL instead of double-creating (a duplicate is a second bill). The jq filter is not optional: the raw output carries `.spec.auth_token`.
 3. **Dry-run.**
    ```bash
    nebius ai endpoint create --parent-id <project-id> --name vllm-abc123 \
@@ -108,11 +110,14 @@ Default is `--auth none` — an open endpoint on the internet. For anything beyo
    ```
 4. **State the cost** — hourly and per-day, explicitly flagged as accruing until delete, not until "done".
 5. **Confirmation gate.** Full command verbatim, what it deploys, the recurring cost line. Explicit yes or no mutation.
-6. **Execute once**, prefer `--async` + poll `endpoint get --id <id>` (model-pulling images take minutes; never `logs --follow`).
-7. **Smoke test before declaring success.** Get the managed URL from `endpoint get --format json`, then:
+6. **Execute once**, prefer `--async` + poll `endpoint get --id <id> --format json | jq '{state: .status.state, urls: .status.public_endpoints}'` (model-pulling images take minutes; never `logs --follow`; never poll unfiltered — see the token warning above).
+7. **Smoke test before declaring success.** Extract the URL and the token with jq into unechoed shell variables and use them in the same compound command, so the token never lands in the transcript or shell history:
    ```bash
-   curl -sS -m 15 -H "Authorization: Bearer <token>" https://<managed-url>/<health-or-infer-path>
+   URL=$(nebius ai endpoint get --id <id> --format json | jq -r '.status.public_endpoints[0]') \
+     && TOKEN=$(nebius ai endpoint get --id <id> --format json | jq -r '.spec.auth_token') \
+     && curl -sS -m 15 -H "Authorization: Bearer $TOKEN" "$URL"/<health-or-infer-path>
    ```
+   Never `echo $TOKEN`, never substitute the literal token into the curl. With `--auth none`, skip the `TOKEN` line and the header. With `--token-secret`, the token lives in MysteryBox, not in the spec — fetch it per `nebius-serverless-data-secrets`, or hand the curl to the user.
    A deploy is not done until the URL answers. If it doesn't → `nebius-serverless-troubleshooting`, and remember the meter is running while you debug.
 8. **Report**: id, name, state, URL, and the cost line (rule 1 above).
 
