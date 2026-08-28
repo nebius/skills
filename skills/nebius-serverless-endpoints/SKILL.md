@@ -36,7 +36,7 @@ nebius config get parent-id    # project-...
 nebius config get tenant-id    # tenant-...
 ```
 
-These skills require CLI `0.12.247` or newer. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
+These skills require CLI `0.12.247` or newer; an individual skill may state a higher floor (the Serverless skills need `0.12.265`) — the stricter number wins. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
 
 If any check fails or an ID comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and the shown federation-profile command opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call, and re-auth is the same human task.
 
@@ -108,6 +108,7 @@ Default is `--auth none` — an open endpoint on the internet. For anything beyo
      --platform gpu-h100-sxm --preset 1gpu-16vcpu-200gb \
      --container-port 8000/http --auth token --dry-run
    ```
+   The full flag surface (every valid flag, commented) is `assets/endpoint-create.sh` — build the command from it rather than improvising flags.
 4. **State the cost** — hourly and per-day, explicitly flagged as accruing until delete, not until "done".
 5. **Confirmation gate.** Full command verbatim, what it deploys, the recurring cost line. Explicit yes or no mutation.
 6. **Execute once**, prefer `--async` + poll `endpoint get --id <id> --format json | jq '{state: .status.state, urls: .status.public_endpoints}'` (model-pulling images take minutes; never `logs --follow`; never poll unfiltered — see the token warning above).

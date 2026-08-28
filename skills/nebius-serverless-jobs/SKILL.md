@@ -36,7 +36,7 @@ nebius config get parent-id    # project-...
 nebius config get tenant-id    # tenant-...
 ```
 
-These skills require CLI `0.12.247` or newer. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
+These skills require CLI `0.12.247` or newer; an individual skill may state a higher floor (the Serverless skills need `0.12.265`) — the stricter number wins. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
 
 If any check fails or an ID comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and the shown federation-profile command opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call, and re-auth is the same human task.
 
@@ -96,7 +96,7 @@ Availability differs per region (RTX 6000-class platforms exist only in some) �
      --platform gpu-h100-sxm --preset 1gpu-16vcpu-200gb \
      --timeout 4h --dry-run
    ```
-   Fix validation errors here, not on the billable attempt.
+   Fix validation errors here, not on the billable attempt. The full flag surface (every valid flag, commented) is `assets/job-create.sh` — build the command from it rather than improvising flags.
 4. **State the cost.** Before creating, tell the user the preset's hourly price (current prices: https://nebius.com/prices) and the worst case implied by `--timeout`. A job bills from provisioning until a terminal state.
 5. **Confirmation gate.** Print the fully resolved create command (without `--dry-run`) verbatim, what it launches, and the cost line. Stop and wait for an explicit yes. No confirmation → no job.
 6. **Execute once.** **`--timeout` is mandatory, always explicit.** Verified footgun: a job whose image never starts does not fail — it sits in `STARTING`, billing, until the timeout; the default is 24 hours (range 1h–168h). Set it to a realistic runtime bound. For anything longer than a few minutes add `--async` and poll rather than blocking.
