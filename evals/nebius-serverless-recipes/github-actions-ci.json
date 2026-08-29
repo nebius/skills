@@ -1,0 +1,11 @@
+{
+  "skills": ["nebius-serverless-recipes", "nebius-serverless-setup"],
+  "query": "set up a github action that runs my nebius job on every push to main",
+  "expected_behavior": [
+    "Uses non-interactive service-account-key auth (nebius profile create --service-account-file-path from a CI secret), never a browser login",
+    "Reads the credentials from the CI secret store into a temp file with 0600 perms; never echoes or logs the key material",
+    "Puts a nebius ai job create --dry-run step before the real submit so a bad spec fails the build cheaply",
+    "Uses a deterministic job name (e.g. ci-<sha>) and an explicit --timeout",
+    "Does not have the agent generate the SA key or run iam get-access-token — those are human/CI steps"
+  ]
+}

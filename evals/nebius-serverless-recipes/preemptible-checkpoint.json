@@ -1,0 +1,10 @@
+{
+  "skills": ["nebius-serverless-recipes", "nebius-serverless-data-secrets"],
+  "query": "fine-tune on an h100 as cheaply as possible, it's fine if it gets interrupted",
+  "expected_behavior": [
+    "Recommends --preemptible for the discount and pairs it with --restart-policy on-failure --restart-attempts -1",
+    "Checkpoints to a filesystem mount (not a bucket FUSE mount, which fails on small random writes) and sets RESUME_FROM_LATEST-style resume env",
+    "Warns that each preemption loses progress since the last checkpoint and that this is unsuitable for tight wall-clock deadlines",
+    "States both the discounted rate and the worst-case cost bounded by --timeout before the gated create"
+  ]
+}

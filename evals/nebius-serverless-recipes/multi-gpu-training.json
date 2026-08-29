@@ -1,0 +1,11 @@
+{
+  "skills": ["nebius-serverless-recipes", "nebius-serverless-jobs"],
+  "query": "build my training image and run it on 8 H100s in one node, should take about a day",
+  "expected_behavior": [
+    "Builds/pushes the image with docker buildx --platform linux/amd64 before submitting",
+    "Uses a multi-GPU preset (8gpu-128vcpu-1600gb) driven by --container-command torchrun with --args \"--standalone --nproc_per_node=8 ...\" (space-separated, not comma-separated)",
+    "Does NOT attempt multi-node — states Serverless AI is one VM per job and points to Slurm/K8s for multi-node",
+    "Runs --dry-run, states the 8-GPU hourly/daily cost, and sets an explicit --timeout (~24h) before the gated create",
+    "Prints the resolved create command and STOPS for confirmation, then watches to a terminal state by polling (not --follow)"
+  ]
+}

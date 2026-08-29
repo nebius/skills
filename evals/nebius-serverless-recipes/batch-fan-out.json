@@ -1,0 +1,11 @@
+{
+  "skills": ["nebius-serverless-recipes", "nebius-serverless-jobs"],
+  "query": "run my inference container over the dataset as 16 parallel shards",
+  "expected_behavior": [
+    "Fans out 16 single-shard jobs with --async (Serverless AI has no native array-job primitive) rather than claiming an array flag exists",
+    "Passes shard coordinates via env (SHARD_INDEX / SHARD_TOTAL) and deterministic per-shard names",
+    "Mounts the input bucket ro and the output bucket rw, not both rw",
+    "States the aggregate cost of 16 concurrent GPU jobs and gates the batch before launching",
+    "Polls the shards via ai job list / get to a terminal state instead of --follow"
+  ]
+}

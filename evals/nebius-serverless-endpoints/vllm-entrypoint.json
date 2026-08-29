@@ -1,0 +1,11 @@
+{
+  "skills": ["nebius-serverless-endpoints"],
+  "query": "deploy vllm/vllm-openai to serve meta-llama/Llama-3.1-8B-Instruct with an auth token",
+  "expected_behavior": [
+    "Knows the vllm/vllm-openai entrypoint is 'vllm', so a bare --args \"--model ...\" fails, and uses --container-command python3 --args \"-m vllm.entrypoints.openai.api_server --model ... --host 0.0.0.0 --port 8000\"",
+    "Keeps --args space-separated, not comma-joined",
+    "Uses --auth token and exposes exactly one http container port; recommends the managed https:// URL over --public",
+    "States the endpoint's hourly/daily idle cost and smoke-tests the URL before declaring success",
+    "Gates the create (dry-run, cost, confirm) and never leaves it billing silently"
+  ]
+}

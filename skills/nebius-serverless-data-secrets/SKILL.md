@@ -77,6 +77,14 @@ Compute resources are generally **project**-scoped; public-image discovery is re
 - `PROFILE` names AWS credentials (default `default`). For secret-backed S3 auth use `PROFILE@SECRET_SELECTOR` — the credentials come from MysteryBox, nothing lands on disk in the container spec.
 - A `SECRET_SELECTOR` anywhere in this skill is: a secret name, secret ID, version ID, or `SECRET_ID@VERSION_ID`.
 
+### Bucket FUSE mounts are read-mostly — writes fail in specific ways
+
+A bucket mount is FUSE-backed: fine for sequential reads (loading weights, datasets), but it rejects metadata ops (chmod/utime) and atomic rename/mmap. When a workload **writes** into the mount you get `[Errno 1] Operation not permitted` from `shutil.copytree`/`copy2`, and HuggingFace **Xet** / `hf_transfer` fail the same way. This surfaces as a confusing mid-run crash, not a mount error. Fixes:
+
+- **Staging weights into a bucket:** download to local disk first, then copy **data-only** — `shutil.copyfile` inside an `os.walk`, never `copytree` (it tries to replicate metadata).
+- **Live read-write** (a cache, per-request outputs): don't use the FUSE mount. Either use the S3 API (boto3, below) against Object Storage, or mount a **filesystem** instead of a bucket — `--volume <filesystem-id>:/path:rw` has POSIX semantics and takes the small random writes that checkpoint-heavy training needs.
+- Mount inputs `ro` regardless — see above; a stray `rw` on a shared dataset bucket is how one job corrupts another's inputs.
+
 ## Secrets into the container
 
 - **Env secrets:** `--env-secret KEY=SECRET_SELECTOR` (repeatable). Plain `--env KEY=VALUE` is for non-secret config only — an `--env HF_TOKEN=hf_…` lands in the resource spec, readable by anyone who can `get` it.
