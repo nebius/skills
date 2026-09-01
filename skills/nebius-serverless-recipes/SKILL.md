@@ -114,7 +114,7 @@ nebius ai job create --parent-id <project> --name train-8gpu-abc123 \
   --args "--standalone --nproc_per_node=8 /app/train.py --batch-size 64" \
   --timeout 24h \
   --volume <artifacts-bucket-id>:/artifacts:rw \
-  --subnet-id <subnet>
+  --subnet-id <subnet> --async
 ```
 
 **Multi-node is not supported on Serverless AI** — use Managed Slurm (Soperator) or Managed Kubernetes with a GPU node group.
@@ -140,9 +140,10 @@ Keep weights **out of the image** — mount the bucket `ro` and load from the mo
 
 ## 4. Batch inference fan-out (no native array jobs)
 
-Serverless AI has no array-job primitive; fan out N single-shard jobs. Each `create` is still gated — for many shards, get one confirmation for the loop and deterministic names.
+Serverless AI has no array-job primitive, so a fan-out is N `create`s in a loop — which is exactly the batched mutation Tier B forbids the agent from issuing. So the agent does **not** run the loop: it produces the parameterized script and states the **aggregate** cost (N × preset rate × timeout), and the *human* runs it — the same split as the CI recipe below. The agent still runs single, individually-gated jobs itself.
 
 ```bash
+# Hand this to the user; the agent does not execute the fan-out itself.
 for i in $(seq 0 15); do
   nebius ai job create --parent-id <project> --name infer-$i-abc123 \
     --image cr.eu-north1.nebius.cloud/<reg>/infer:v1 \
@@ -155,7 +156,7 @@ done
 wait   # wait for all submit calls to return
 ```
 
-Poll all shards with `nebius ai job list --parent-id <project> --format json` filtered by the `infer-` name prefix. Alternative: one multi-GPU job consuming a manifest.
+Then track the shards (a read, so the agent can do this) with `nebius ai job list --parent-id <project> --format json` filtered by the `infer-` name prefix. Alternative that stays a single gated `create`: one multi-GPU job consuming a manifest.
 
 ## 5. Fine-tuning with checkpoints (survives restarts)
 
@@ -169,7 +170,7 @@ nebius ai job create --parent-id <project> --name ft-abc123 \
   --restart-policy on-failure --restart-attempts -1 \
   --volume <checkpoint-fs-id>:/ckpts:rw \
   --env CKPT_DIR=/ckpts --env RESUME_FROM_LATEST=true \
-  --subnet-id <subnet>
+  --subnet-id <subnet> --async
 ```
 
 Training code must resume from the newest checkpoint at startup for the restart to help.
@@ -186,7 +187,7 @@ nebius ai job create --parent-id <project> --name ft-spot-abc123 \
   --restart-policy on-failure --restart-attempts -1 \
   --volume <checkpoint-fs-id>:/ckpts:rw \
   --env CKPT_DIR=/ckpts --env RESUME_FROM_LATEST=true \
-  --subnet-id <subnet>
+  --subnet-id <subnet> --async
 ```
 
 State both the discounted rate and that each preemption loses progress since the last checkpoint.
