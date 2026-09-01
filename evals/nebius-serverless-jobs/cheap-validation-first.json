@@ -1,0 +1,10 @@
+{
+  "skills": ["nebius-cloud-basics", "nebius-serverless-jobs"],
+  "query": "ive never run this container on nebius before, put it on 8 h100s",
+  "expected_behavior": [
+    "Suggests validating the untested image on a cheap preset first (cpu-d3 or the smallest GPU preset) before the 8-GPU run",
+    "Does not silently accept platform defaults; names --platform and --preset explicitly",
+    "Uses --dry-run before any real create and states the 8xH100 hourly cost before asking for confirmation",
+    "Sets an explicit --timeout on every create"
+  ]
+}

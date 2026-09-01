@@ -1,24 +1,23 @@
 ---
-name: nebius-cloud-basics
-description: Foundation for the nebius CLI. Check before any other Nebius task, or if the CLI is not installed or configured, or a nebius command needs the right profile, --parent-id, or output format, or fails with an unclear error.
+name: nebius-serverless-data-secrets
+description: Data and credentials for Nebius Serverless jobs and endpoints. Use for "mount an s3 bucket", "pass an api key to my container", "pull from a private registry", "inject a config file", "where do my results go" - any volume, env secret, registry auth, or artifact egress question.
 license: Apache-2.0
-compatibility: Requires the nebius CLI (>=0.12.247) with a configured profile; jq recommended
+compatibility: Requires the nebius CLI (>=0.12.265) with a configured profile; jq recommended
 metadata:
   version: "0.1.0"
 allowed-tools:
   - Bash(nebius version:*)
-  - Bash(nebius profile list:*)
   - Bash(nebius profile current:*)
-  - Bash(nebius profile active:*)
   - Bash(nebius config get:*)
-  - Bash(nebius config list:*)
-  - Bash(nebius iam whoami:*)
+  - Bash(nebius ai job get:*)
+  - Bash(nebius ai job get-by-name:*)
+  - Bash(nebius ai endpoint get:*)
+  - Bash(nebius ai endpoint get-by-name:*)
 ---
 
-# Nebius Cloud Basics
+# Nebius Serverless Data & Secrets
 
-Consult this skill for any nebius CLI question the other `nebius-*` skills don't cover.
-Everything the other `nebius-*` skills assume: how to pick a profile, resolve the right `--parent-id`, get machine-readable output, wait on operations, and stay inside the safety tiers.
+How data and credentials get into and out of `ai job`/`ai endpoint` containers: S3 volumes, MysteryBox-backed secrets, injected config files. These are all flags on `create` — the create itself stays gated by `nebius-serverless-jobs`/`nebius-serverless-endpoints`; this skill supplies the flags and their traps.
 
 <!-- BEGIN SHARED PREAMBLE (generated from shared/preamble.md — edit there, then run scripts/sync-shared.py) -->
 ## Nebius CLI ground rules
@@ -65,42 +64,51 @@ Compute resources are generally **project**-scoped; public-image discovery is re
 **Secrets.** Never print or persist tokens, access keys, or the contents of `~/.nebius/credentials.json`.
 <!-- END SHARED PREAMBLE -->
 
-## Grounding sequence
+**Version floor:** these flags need CLI **>= 0.12.265**; if `nebius version` is older, ask the user to run `nebius update` first (print it — never run it yourself).
 
-The four checks in the preamble above establish that the CLI, a profile, and both IDs exist. Two more are worth running before acting:
+## S3 volumes (the main data path)
 
-```bash
-nebius profile current                 # profile actually in effect (can differ from [default]); prints a bare name, --format is ignored
-nebius iam whoami --format json        # the session's token still works
+```
+--volume s3://BUCKET:/container_path[:MODE[:PROFILE]]     # MODE: rw | ro (default rw)
 ```
 
-`whoami` is the only one that touches the API — a profile passes every local check and still fails here once its session expires. See *Decoding errors* below.
+- Repeatable; also accepts plain `SOURCE:CONTAINER_PATH[:MODE]` mounts.
+- Mount inputs `ro` unless the workload writes back — a stray `rw` on a shared dataset bucket is how training runs corrupt inputs.
+- `PROFILE` names AWS credentials (default `default`). For secret-backed S3 auth use `PROFILE@SECRET_SELECTOR` — the credentials come from MysteryBox, nothing lands on disk in the container spec.
+- A `SECRET_SELECTOR` anywhere in this skill is: a secret name, secret ID, version ID, or `SECRET_ID@VERSION_ID`.
 
-If the user names a profile ("use the testing profile"), append `-p <profile>` to **every** subsequent command — the active profile is easy to forget mid-session and mixing scopes across profiles is the top source of confusing permission errors.
+## Secrets into the container
 
-Some profiles have no `parent-id` or `tenant-id` configured — `config get` then returns an error or empty value. In that case ask the user which project/tenant to target; do not borrow IDs from another profile.
+- **Env secrets:** `--env-secret KEY=SECRET_SELECTOR` (repeatable). Plain `--env KEY=VALUE` is for non-secret config only — an `--env HF_TOKEN=hf_…` lands in the resource spec, readable by anyone who can `get` it.
+- **Private registry:** `--registry-secret <selector>` — a MysteryBox secret with `REGISTRY_USERNAME` and `REGISTRY_PASSWORD` payload keys. **Never `--registry-username`/`--registry-password` in scripts or agent-composed commands** (plaintext in the spec and in shell history; the flags are headed for deprecation, MSPDEV-347). If no such secret exists yet, creating one in MysteryBox is the human's step — print what the payload keys must be named.
+- The same selectors serve endpoint auth tokens (`--token-secret`, payload key `AUTH_TOKEN`) — see `nebius-serverless-endpoints`.
 
-## Which --parent-id does a command want?
+## Config files
 
-| Command family | Scope to pass |
-|---|---|
-| `compute *` (instances, disks, filesystems, gpu-clusters, project images, platforms) | project (`project-...`) |
-| `compute image list-public` | region via required `--region`; no `--parent-id` or `--all` |
-| `quotas quota-allowance *` | project (or tenant for tenant-wide quotas) |
-| `capacity resource-advice list` | **tenant** (`tenant-...`) — required to compute quota-clipped availability |
-| `capacity capacity-block-group *`, `capacity capacity-interval *` | **tenant** |
-| `capacity capacity-allowance *` | project |
+```
+--inject-file LOCAL_PATH:CONTAINER_PATH        # repeatable
+```
 
-## Decoding errors
+Three hard limits, all verified: **64 KiB max**, **read-only** inside the container, `CONTAINER_PATH` must be **absolute**. Right for a config or small manifest; wrong for anything bigger or writable — that's an S3 volume. Never inject a file that contains a credential — that's `--env-secret`'s job.
 
-- **Permission denied / empty list where resources should exist** — usually the wrong `--parent-id` scope (project vs tenant) or the wrong profile. Re-run the grounding sequence before retrying.
-- **Authentication errors** — the profile's session expired. Re-auth is a human task (`nebius profile create` opens a browser); tell the user, don't attempt it.
-- **Unknown flag / command** — the CLI is auto-generated and changes between versions. Treat `nebius <cmd> --help` as ground truth, never a memorized flag list.
-- The CLI retries transient errors itself (`--retries`, default 3). Do not wrap read calls in your own retry loop; never retry a mutation after an ambiguous failure — check actual state with `get`/`list` first.
+## Getting results out
 
-## Going deeper
+Write artifacts to an `rw` S3 volume path — that is the supported egress; the container filesystem vanishes with the job.
 
-- [references/context-resolution.md](references/context-resolution.md) — profiles, `~/.nebius/config.yaml`, NID formats, auth types, multi-profile work
-- [references/output-and-paging.md](references/output-and-paging.md) — `--format json|yaml|jsonpath`, jq recipes, `--page-size`/`--page-token`/`--all`
-- [references/operations.md](references/operations.md) — async operations, `operation wait`, polling patterns, timeouts and retries
-- [references/safety-tiers.md](references/safety-tiers.md) — the full tier table with rationale and the complete refuse list
+Bucket-side operations (download results locally, pre-upload datasets, list objects) have **no native CLI path** — there is no `nebius storage cp` (known gap). Use the AWS CLI against Nebius Object Storage with the bucket's endpoint and credentials:
+
+```bash
+aws s3 cp s3://BUCKET/results/ ./results/ --recursive --endpoint-url <storage-endpoint>
+```
+
+Setting up those AWS credentials is a one-time human step (access keys are Tier C credential issuance) — point the user at the console's Object Storage access-key page rather than minting keys yourself.
+
+## Checking what a workload actually mounts
+
+`nebius ai job get --id <id> --format json` (same for endpoints) shows the resolved volumes, env names, and secret *selectors* — never the secret values. Use it to debug "my file isn't there" before touching the container: nine times out of ten the container path or mode is wrong in the spec.
+
+## Hand-offs
+
+- Composing the actual `create` (gating, dry-run, cost) → `nebius-serverless-jobs` / `nebius-serverless-endpoints`.
+- Auth for the CLI itself (service accounts, tokens) → `nebius-serverless-setup`.
+- Mount present but empty, permission errors on the bucket → `nebius-serverless-troubleshooting`.

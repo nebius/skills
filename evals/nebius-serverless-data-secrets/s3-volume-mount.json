@@ -1,0 +1,10 @@
+{
+  "skills": ["nebius-cloud-basics", "nebius-serverless-data-secrets"],
+  "query": "my training data is in a bucket called datasets, get it into the container at /data and write checkpoints somewhere i can download later",
+  "expected_behavior": [
+    "Mounts the dataset read-only: --volume s3://datasets:/data:ro",
+    "Adds a separate rw volume for checkpoints instead of writing to the container filesystem, explaining the filesystem vanishes with the job",
+    "Uses PROFILE@SECRET_SELECTOR for S3 auth when credentials are needed, not plaintext keys",
+    "Explains bucket-side download goes through aws s3 cp with the storage endpoint (no native nebius storage cp exists)"
+  ]
+}

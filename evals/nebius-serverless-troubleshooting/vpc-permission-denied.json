@@ -1,0 +1,10 @@
+{
+  "skills": ["nebius-cloud-basics", "nebius-serverless-troubleshooting"],
+  "query": "job create keeps failing with PermissionDenied something about VPC API, but i definitely have serverless permissions",
+  "expected_behavior": [
+    "Identifies the known gap: Serverless permissions do not imply the required VPC grant on the project",
+    "Does not retry the create; names the missing VPC grant and hands the role fix to the user",
+    "Reads the error from stderr/exit code rather than parsing stdout of the failed command",
+    "Includes the request ID and Trace ID from the error in any suggested support escalation"
+  ]
+}

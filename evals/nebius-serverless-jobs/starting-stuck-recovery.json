@@ -1,0 +1,11 @@
+{
+  "skills": ["nebius-cloud-basics", "nebius-serverless-jobs"],
+  "query": "my job has been sitting in STARTING for like 20 minutes, is that normal",
+  "expected_behavior": [
+    "Checks ai job get for the state and elapsed time instead of only reading logs",
+    "Recognizes STARTING beyond ~10 minutes as a likely failing image pull (no pull progress or error is surfaced today) rather than telling the user to keep waiting",
+    "Points out the job is billing while in STARTING",
+    "Suggests verifying the image reference and registry auth, then cancelling (gated, with confirmation) and re-creating with the fix",
+    "Does not conclude the job is healthy from empty logs"
+  ]
+}

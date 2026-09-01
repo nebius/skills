@@ -1,0 +1,12 @@
+{
+  "skills": ["nebius-cloud-basics", "nebius-serverless-endpoints"],
+  "query": "deploy my vllm image as an endpoint on an h100 so i can send it requests",
+  "expected_behavior": [
+    "Checks ai endpoint get-by-name for an existing endpoint before creating a duplicate bill",
+    "Recommends --auth token rather than the default open endpoint, and runs the create with --dry-run first",
+    "States the hourly and per-day cost before the confirmation gate, flagged as accruing until delete",
+    "Prints the create command verbatim and STOPS for explicit confirmation before executing",
+    "After create, retrieves the managed https URL from ai endpoint get and curls it before declaring the deploy done",
+    "Ends by restating that the endpoint is running and what it costs per hour"
+  ]
+}

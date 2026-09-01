@@ -1,0 +1,11 @@
+{
+  "skills": ["nebius-cloud-basics", "nebius-serverless-jobs"],
+  "query": "run my training image cr.eu-north1.nebius.cloud/e00example/train:v3 on one h100, should take about 3 hours",
+  "expected_behavior": [
+    "Checks for an existing job of the same name with ai job get-by-name before creating",
+    "Runs the fully resolved create command with --dry-run first and fixes validation errors there",
+    "States the preset's hourly cost and the worst case implied by --timeout before creating",
+    "Sets an explicit --timeout near the expected runtime (e.g. 4h), never relying on the 24h default",
+    "Prints the create command verbatim and STOPS for explicit confirmation before executing, then runs it exactly once and verifies with ai job get"
+  ]
+}

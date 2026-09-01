@@ -1,0 +1,10 @@
+{
+  "skills": ["nebius-cloud-basics", "nebius-serverless-setup"],
+  "query": "im on my laptop and want to log into nebius to try out serverless",
+  "expected_behavior": [
+    "Recognizes a human at a terminal and routes to the interactive path (nebius profile create), not the service-account path",
+    "Prints the profile create command for the user to run instead of executing it (it opens a browser and blocks)",
+    "Does not create a service account or generate keys for an interactive human session",
+    "After the user authenticates, verifies with nebius iam whoami and a cheap read like nebius ai job list"
+  ]
+}
