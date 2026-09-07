@@ -85,6 +85,23 @@ Availability differs per region (RTX 6000-class platforms exist only in some) �
 
 **Validate cheap, run expensive.** First run of an untested image → `cpu-d3` (or the smallest GPU preset if CUDA is required). `--preemptible` is markedly cheaper but the VM can be stopped at any time — pair it with `--restart-policy on-failure` only if the workload checkpoints; default `never` otherwise.
 
+## Command and args (verified footgun)
+
+`--args` is one string split on **spaces** into container argv — commas are literal, **not** separators. A comma-joined list (`--args "--a,1,--b,2"`) arrives as a single broken token and crashes arg parsing. The image `ENTRYPOINT` is prepended, so the args must be valid for it.
+
+- Right: `--args "--epochs 3 --lr 1e-4"`  ·  Wrong: `--args "--epochs,3,--lr,1e-4"`
+- A multi-word `bash -c "…"` can **not** go through `--args` (the whole script must be a single arg). Bake multi-step or piped logic into a script in the image and run it with `--container-command /path/run.sh`.
+- `--container-command` overrides the `ENTRYPOINT` (leaves `CMD` alone); `--args` overrides `CMD`.
+
+**Multi-GPU, single node:** pick a multi-GPU preset and drive it with `torchrun`:
+
+```bash
+--container-command torchrun \
+--args "--standalone --nproc_per_node=8 /app/train.py --batch-size 64"
+```
+
+Serverless AI is **one VM per job** — there is no multi-node. For multi-node training use Managed Slurm (Soperator) or Managed Kubernetes with a GPU node group.
+
 ## The job create workflow (follow in order, no skipping)
 
 1. **Requirements.** Image reference, command/args, platform+preset, data in/out (volumes → `nebius-serverless-data-secrets`), and an explicit `--timeout`. Anything missing → ask, don't default silently.

@@ -93,6 +93,7 @@ nebius ai job logs <id> --tail 200 --timestamps      # endpoint logs <id> works 
 - The id is **positional** — `job logs --id <id>` fails while `job get --id <id>` works; known inconsistency, don't fight it.
 - Always bound the read: `--tail N`, `--since 1h` (the default window is 1h — pass `--since` explicitly for older jobs), `--until` for a window. Never `--follow` (hangs unattended sessions; poll bounded reads instead).
 - **No logs ≠ no problem.** `logs` returns empty with exit code 0 for a workload that never started — verified. Never conclude health from empty logs: cross-check `get` state and elapsed time first. Empty logs + non-terminal state + minutes elapsed = startup failure until proven otherwise.
+- **Retention is not guaranteed after `delete`.** Logs disappear some time after the resource is deleted, and the retention window is undocumented — so `logs` is not a durable record for a long run. For anything you need to keep, have the **container itself** write logs to a mounted bucket (or your own collector) during the run; don't rely on querying them later.
 
 ## Error catalog
 

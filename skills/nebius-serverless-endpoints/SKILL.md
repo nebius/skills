@@ -97,6 +97,21 @@ Default is `--auth none` — an open endpoint on the internet. For anything beyo
 
 **Token-auth endpoints leak through `get`.** The raw `endpoint get`/`get-by-name` output includes the token at `.spec.auth_token`. Never run those commands unfiltered on a token-auth endpoint and never echo the token — always pipe through a jq filter that selects only the fields you need (see the workflow below).
 
+## Container command and args (the vLLM trap)
+
+`--args` is split on **spaces**, not commas (a comma-joined list arrives as one broken token), and the image `ENTRYPOINT` is prepended — the args must be valid for that entrypoint. The classic trap is `vllm/vllm-openai`, whose entrypoint is `vllm`: a bare `--args "--model X"` fails (no subcommand). The robust, verified form bypasses the entrypoint:
+
+```bash
+--container-command python3 \
+--args "-m vllm.entrypoints.openai.api_server --model Qwen/Qwen3-0.6B --host 0.0.0.0 --port 8000"
+```
+
+Right: `--args "--model X --port 8000"`  ·  Wrong: `--args "--model,X,--port,8000"`.
+
+### Serving an embedding / pooling model
+
+Add `--runner pooling` (vLLM ≥ 0.14; older builds used `--task embed`), plus `--trust-remote-code` for models that ship custom code. This exposes `/v1/embeddings`, `/pooling`, `/score`, `/rerank`. Note `/v1/models` may 404 while the model is still loading, then 200 once ready — don't read the transient 404 as a failed deploy; confirm with a real request in the smoke test.
+
 ## The deploy workflow (follow in order, no skipping)
 
 1. **Requirements.** Image, port(s)+protocol, platform+preset (same catalog and discovery as jobs — see `nebius-serverless-jobs` or `nebius compute platform list`), auth choice, volumes/secrets.

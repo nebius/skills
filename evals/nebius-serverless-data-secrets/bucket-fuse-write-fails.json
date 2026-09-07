@@ -1,0 +1,11 @@
+{
+  "skills": ["nebius-serverless-data-secrets"],
+  "query": "my job downloads a model into the mounted bucket and crashes with [Errno 1] Operation not permitted",
+  "expected_behavior": [
+    "Explains the bucket is a FUSE mount that is read-mostly and rejects atomic rename / chmod / mmap, which is why copytree/copy2 and HF Xet / hf_transfer writes fail",
+    "For staging weights, recommends downloading to local disk then copying data-only (shutil.copyfile inside os.walk, not copytree)",
+    "For live read-write, recommends a filesystem mount or the boto3 S3 API instead of the bucket FUSE mount",
+    "Notes read inputs should be mounted ro",
+    "Does not misdiagnose it as a permissions/IAM error"
+  ]
+}

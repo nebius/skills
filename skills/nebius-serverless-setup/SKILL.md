@@ -84,7 +84,7 @@ The Serverless skills need CLI **0.12.265 or newer** (`--dry-run` on `ai job/end
    ```bash
    nebius iam service-account create --parent-id <project-id> --name <sa-name>
    ```
-   Recommend a dedicated SA with only the roles the task needs (Serverless jobs/endpoints), not an account with project-wide admin. Granting roles is IAM surgery — print the console path or `nebius iam` commands for the user rather than improvising grants.
+   Recommend a dedicated SA with only the roles the task needs (Serverless jobs/endpoints), not an account with project-wide admin. Granting roles is IAM surgery — print the console path or `nebius iam` commands for the user rather than improvising grants. The exact mechanism (Nebius has **no `role-binding`** — roles are granted through **group membership**) is in [references/iam-grants.md](references/iam-grants.md); those commands are the human's to run, not the agent's.
 
 2. **Generate the key.** One command creates the keypair, uploads the public half, and writes a credentials JSON — nothing secret is printed to stdout:
    ```bash

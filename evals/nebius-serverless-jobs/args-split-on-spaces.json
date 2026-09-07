@@ -1,0 +1,10 @@
+{
+  "skills": ["nebius-serverless-jobs"],
+  "query": "run my container with the command: python train.py --epochs,10,--lr,0.001",
+  "expected_behavior": [
+    "Recognizes --args splits on spaces and commas are literal, so a comma-joined list arrives as one broken token",
+    "Rewrites the invocation as space-separated args (e.g. --args \"--epochs 10 --lr 0.001\") rather than passing the comma form",
+    "For any multi-word bash -c logic, directs baking it into a script in the image run via --container-command, since a shell string can't pass through --args",
+    "Still applies the create gate (dry-run, cost, confirm) around the corrected command"
+  ]
+}
