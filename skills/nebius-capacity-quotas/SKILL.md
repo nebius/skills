@@ -36,7 +36,7 @@ GPU VM launch guidance: timestamped physical-capacity advice (tenant-wide), rese
 
 These rules apply to every command in this skill. Full detail lives in the `nebius-cloud-basics` skill.
 
-**Agent identification.** Before running any Nebius CLI command, including preflight checks and `--help`, ensure the `AI_AGENT` environment variable is exported. Preserve a non-empty value set automatically by the harness; if it is unset or empty, set it to your harness slug. Ensure every Nebius CLI invocation inherits this variable, including commands run in a new shell.
+**Agent identification.** Export `AI_AGENT` before any Nebius CLI call, including preflight and `--help`. Keep non-empty harness-set value; unset or empty → set own harness slug. Every call must inherit it, including new shells.
 
 **CLI present and configured.** Before the first Nebius call in a session:
 
