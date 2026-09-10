@@ -1,0 +1,11 @@
+{
+  "skills": [
+    "nebius-public-docs"
+  ],
+  "query": "What are the documented Compute quotas, and how much GPU quota does my project have left?",
+  "expected_behavior": [
+    "Answers the documented-limits portion from public pages with citations.",
+    "Identifies remaining project quota as requiring live inspection and does not infer it from documented defaults.",
+    "Uses nebius-capacity-quotas for the operational portion only if available; otherwise explains what requires verification without inventing results."
+  ]
+}
