@@ -26,6 +26,12 @@ Additional invariants baked into every skill:
 
 Skills are instructions your agent will follow. Before installing this or any skill repo: read every `SKILL.md` and `references/` file, check `allowed-tools` for over-broad grants, and pin to a reviewed commit.
 
+The content is best-effort guidance, not official Nebius documentation — commands, flags, presets etc are verified at authoring time and drift with the CLI and the platform. Review every command an agent proposes before it runs, most of all `create`, quota changes, and anything with `delete` in it.
+
 ## Reporting
 
-Report vulnerabilities or unsafe skill behavior via the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/nebius/skills/security/advisories/new) tab rather than a public issue.
+**Security** — a skill that emits credentials, runs or induces a destructive command, or looks deliberately malicious: report it privately via the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/nebius/skills/security/advisories/new) tab rather than a public issue. Include the skill name, the commit or release you installed, and the agent transcript if you have one, with secrets redacted.
+
+**Incorrect guidance** — a wrong flag or preset, a command the CLI no longer has: not a vulnerability, so open a public [issue](https://github.com/nebius/skills/issues/new) with the skill name, the command, your `nebius version`, and the actual output.
+
+If you are unsure which it is, treat it as a security report.

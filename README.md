@@ -33,6 +33,17 @@ Every skill ships the same three-tier model, in prose **and** in `allowed-tools`
 
 Full rationale: [skills/nebius-cloud-basics/references/safety-tiers.md](skills/nebius-cloud-basics/references/safety-tiers.md) and [SECURITY.md](SECURITY.md).
 
+## Scope and support
+
+**Best-effort guidance, not official Nebius documentation.** These skills encode command shapes, flags, presets etc verified against a specific `nebius` CLI version; they drift as the CLI and the platform change. When a skill and [docs.nebius.com](https://docs.nebius.com) (or `nebius <command> --help`) disagree, the docs and the CLI win.
+
+They are also instructions an agent acts on, and the tier model above is prose, not a sandbox — **review every command an agent proposes before letting it run**, especially provisioning, quota changes, and deletion.
+
+Reporting problems:
+
+- **Security** — a skill that emits credentials, runs or induces something destructive, or looks deliberately malicious: report privately via the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/nebius/skills/security/advisories/new) tab, not a public issue.
+- **Incorrect guidance** — a wrong flag, a command the CLI no longer has: open an [issue](https://github.com/nebius/skills/issues/new) with the skill name, the command, your `nebius version`, and what actually happened.
+
 ## Install
 
 Prerequisite everywhere: `nebius` CLI ≥ 0.12.247 with a configured profile ([docs](https://docs.nebius.com/cli)). The `nebius-serverless-*` skills need ≥ 0.12.265 (`--dry-run`, `iam auth-public-key generate`) — `nebius update` gets you there.
