@@ -46,6 +46,8 @@ Answer "what exists?" across Nebius Compute — instances, disks, filesystems, G
 
 These rules apply to every command in this skill. Full detail lives in the `nebius-cloud-basics` skill.
 
+**Agent identification.** Export `AI_AGENT` before any Nebius CLI call, including preflight and `--help`. Keep non-empty harness-set value; unset or empty → set own harness slug. Every call must inherit it, including new shells.
+
 **CLI present and configured.** Before the first Nebius call in a session:
 
 ```bash
