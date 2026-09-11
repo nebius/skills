@@ -1,0 +1,11 @@
+{
+  "skills": [
+    "nebius-grafana-mcp-install"
+  ],
+  "query": "Install the new skill over my existing grafana-nebius entry from another installer.",
+  "expected_behavior": [
+    "Refuse automatic adoption and credential migration.",
+    "Present a distinct server name for human setup.",
+    "Preserve donor files and the existing client registration."
+  ]
+}

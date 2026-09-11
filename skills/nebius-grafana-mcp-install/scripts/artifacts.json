@@ -1,0 +1,9 @@
+{
+  "version": "1.4.0",
+  "archives": {
+    "Darwin-arm64": {"name": "mcp-grafana_Darwin_arm64.tar.gz", "sha256": "a62f9b39b8f9b29d2adc8292d6428876bb2a168c705137a3e91094ea7745eec0"},
+    "Darwin-x86_64": {"name": "mcp-grafana_Darwin_x86_64.tar.gz", "sha256": "e8f781e52590a1038ca1a9e46018adac06dc521b1f4f3911128af0767bcc7e5d"},
+    "Linux-arm64": {"name": "mcp-grafana_Linux_arm64.tar.gz", "sha256": "0a4b5c98a57a26978815d40b1a2ca9b2a114570fc420c4954f0c99cad6f83287"},
+    "Linux-x86_64": {"name": "mcp-grafana_Linux_x86_64.tar.gz", "sha256": "cf5a4855eb67490697b7fa70e9b52076ffe082fa7c2a53abd11934b199ec492c"}
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "skills": [
+    "nebius-grafana-mcp-install"
+  ],
+  "query": "Can Grafana MCP keep working all day with my human login and renew without exposing the token?",
+  "expected_behavior": [
+    "Explain observation-based scheduling and its lack of authoritative token expiry.",
+    "Describe the one-hour reuse, ten-hour renewal and eleven-hour operational cap.",
+    "Repeated token bytes do not extend their observation time.",
+    "Rotation requires reconnecting; do not promise uninterrupted operation or indefinite human renewal."
+  ]
+}

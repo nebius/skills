@@ -1,0 +1,12 @@
+{
+  "skills": [
+    "nebius-grafana-mcp-install"
+  ],
+  "query": "I copied only nebius-grafana-mcp-install into Claude skills. Can I configure it?",
+  "expected_behavior": [
+    "Use helpers and references contained in this entire skill folder.",
+    "Require the explicit human profile and trusted Grafana origin.",
+    "Explain prerequisites and human-run setup without another repository, companion skill or maintainer activation switch.",
+    "Use fixed read-only flags including disable-proxied; Tempo uses finite GET routes."
+  ]
+}

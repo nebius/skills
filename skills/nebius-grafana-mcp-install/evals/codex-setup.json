@@ -1,0 +1,12 @@
+{
+  "skills": [
+    "nebius-grafana-mcp-install"
+  ],
+  "query": "Set up Grafana MCP for Codex using testing-human at https://grafana.example.com/.",
+  "expected_behavior": [
+    "Select the explicit client, human profile and trusted HTTPS origin.",
+    "Run only credential-free check from the agent; present the exact apply command for the human terminal.",
+    "Explain the private proxy and unchanged repository credential-policy deviation.",
+    "Distinguish installing this skill, local setup and live readiness."
+  ]
+}

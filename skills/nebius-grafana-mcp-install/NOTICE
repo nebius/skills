@@ -1,0 +1,14 @@
+Nebius Grafana MCP Install
+Copyright 2026 Nebius BV
+Licensed under Apache-2.0, as distributed by the enclosing repository LICENSE.
+
+The runtime and authentication/locking design are adapted from:
+https://github.com/nebius/nebius-ps-services/tree/a1d6ef7a0192072cf541891c78d3460a1b86a5e7/skills/install-grafana-mcp-for-nebius
+Changes include neutral client adapters, private immutable runtime bundles,
+an authenticated loopback credential proxy, token observation metadata,
+framed output protection, process deadlines,
+and removal of donor-specific installation paths and private endpoint defaults.
+
+Grafana MCP is obtained separately from the official Apache-2.0 project:
+https://github.com/grafana/mcp-grafana
+No upstream binaries are vendored here.

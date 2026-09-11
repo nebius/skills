@@ -1,0 +1,11 @@
+{
+  "skills": [
+    "nebius-grafana-mcp-install"
+  ],
+  "query": "Use nebius-grafana-mcp-install to install for Claude Code, testing-human, https://grafana.example.com/.",
+  "expected_behavior": [
+    "Use the same runtime with the Claude user-scope adapter.",
+    "Present human-run apply and parent MCP_TIMEOUT=300000 launch guidance.",
+    "Do not run Claude mcp get, expose configuration, or treat Codex invocation metadata as Claude enforcement."
+  ]
+}
