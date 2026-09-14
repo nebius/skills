@@ -88,6 +88,44 @@ def local_request(server, method="GET", target="/api/datasources", body=None, he
 
 
 class ProxyTests(unittest.TestCase):
+    def test_datasource_health_verifies_uid_and_preserves_status(self):
+        for status, result in ((200, {"status": "OK"}), (200, {"status": "ERROR"}),
+                               (501, {"message": "plugin has no health handler"})):
+            def respond(method, path, body):
+                if path == "/api/datasources/uid/metrics":
+                    return 200, {"uid": "metrics", "type": "custom-plugin"}, {}
+                return status, result, {}
+
+            with self.subTest(status=status, result=result), upstream(respond) as (backend, calls, _):
+                policy = proxy.ReadPolicy(backend)
+                if status == 200:
+                    self.assertEqual(json.loads(policy.request("GET", "/api/datasources/uid/metrics/health")), result)
+                else:
+                    with self.assertRaises(proxy.ProxyError) as error:
+                        policy.request("GET", "/api/datasources/uid/metrics/health")
+                    self.assertEqual(error.exception.status, status)
+                self.assertEqual([call[1] for call in calls],
+                                 ["/api/datasources/uid/metrics", "/api/datasources/uid/metrics/health"])
+
+    def test_health_rejects_query_body_method_neighbors_and_unknown_uid(self):
+        with upstream(lambda *args: (200, {"uid": "different", "type": "prometheus"}, {})) as (backend, calls, _):
+            policy = proxy.ReadPolicy(backend)
+            for method, path, body in (
+                ("POST", "/api/datasources/uid/metrics/health", b""),
+                ("GET", "/api/datasources/uid/metrics/health?", b""),
+                ("GET", "/api/datasources/uid/metrics/health?x=1", b""),
+                ("GET", "/api/datasources/uid/metrics/health", b"payload"),
+                ("GET", "/api/datasources/uid/metrics/health/", b""),
+                ("GET", "/api/datasources/uid/metrics/health/extra", b""),
+                ("GET", "/api/datasources/uid/metrics/healthcheck", b""),
+            ):
+                with self.subTest(method=method, path=path), self.assertRaises(proxy.ProxyError):
+                    policy.request(method, path, body)
+            self.assertEqual(calls, [])
+            with self.assertRaises(proxy.ProxyError):
+                policy.request("GET", "/api/datasources/uid/metrics/health")
+            self.assertEqual(len(calls), 1)
+
     def test_local_auth_and_header_replacement(self):
         with upstream() as (backend, calls, _), proxy.serve(backend) as (server, thread):
             self.assertEqual(server.server_address[0], "127.0.0.1")

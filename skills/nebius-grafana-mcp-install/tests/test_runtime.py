@@ -168,7 +168,8 @@ class RuntimeTests(unittest.TestCase):
                              GRAFANA_EXTRA_HEADERS="SENTINEL-AMBIENT")
         self.assertEqual(self.rpc(process, "initialize", 1)["serverInfo"]["name"], "fixture")
         self.assertEqual(self.rpc(process, "tools/list", 2)["tools"][0]["name"], "list_datasources")
-        self.assertEqual(self.rpc(process, "tools/call", 3)["content"][0]["text"], "[]")
+        self.assertEqual(json.loads(self.rpc(process, "tools/call", 3)["content"][0]["text"]),
+                         {"datasources": [], "total": 0, "hasMore": False})
         process.wait(timeout=15)
         stdout, stderr = process.communicate()
         self.assertEqual(process.returncode, 75, stderr.decode())

@@ -6,7 +6,8 @@ from pathlib import Path
 import re
 import tomllib
 
-from common import SetupError, atomic_write, check_path, command, json_read, read_bytes, unique_object
+from common import (SetupError, atomic_write, check_path, command, json_bytes,
+                    json_read, mkdir_private, read_bytes, unique_object)
 from runtime_contract import MCP_ARGS
 
 
@@ -46,6 +47,45 @@ class Client:
         if not isinstance(value, dict) or not isinstance(value.get(self.group, {}), dict):
             raise SetupError("Unsupported client configuration shape.")
         return raw, value
+
+    def settings_snapshot(self):
+        """Claude reads MCP_TIMEOUT from its parent settings, not server env."""
+        if self.agent != "claude":
+            return None, {}
+        path = self.home / ".claude/settings.json"
+        check_path(path, self.home, missing=True)
+        if not path.exists():
+            return None, {}
+        raw = read_bytes(path)
+        try:
+            document = json.loads(raw, object_pairs_hook=unique_object)
+            if not isinstance(document, dict) or not isinstance(document.get("env", {}), dict):
+                raise ValueError
+            value = document.get("env", {}).get("MCP_TIMEOUT")
+            if "MCP_TIMEOUT" in document.get("env", {}) and (not isinstance(value, str) or not re.fullmatch(r"[0-9]{1,12}", value)):
+                raise ValueError
+        except (ValueError, UnicodeError) as exc:
+            raise SetupError("Claude user settings or MCP_TIMEOUT are malformed; contents withheld.") from exc
+        return raw, document
+
+    def settings_ready(self, document):
+        return self.agent != "claude" or int(document.get("env", {}).get("MCP_TIMEOUT", "0")) >= 300000
+
+    def configure_settings(self, before):
+        if self.agent != "claude":
+            return
+        raw, document = before
+        if self.settings_snapshot()[0] != raw:
+            raise SetupError("Claude user settings changed during setup; concurrent edits retained.")
+        if self.settings_ready(document):
+            return
+        updated = copy.deepcopy(document)
+        updated.setdefault("env", {})["MCP_TIMEOUT"] = "300000"
+        path = self.home / ".claude/settings.json"
+        # Existing settings directories need not have been created by us.
+        if not path.parent.exists():
+            mkdir_private(path.parent, self.home)
+        atomic_write(path, json_bytes(updated), self.home, expected=raw)
 
     def entry(self, document):
         value = document.get(self.group, {}).get(self.server)

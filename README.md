@@ -1,8 +1,8 @@
 # Nebius Agent Skills
 
-Portable, pure-text agent skills for operating **Nebius AI Cloud** with the `nebius` CLI. One repo serves three channels: a Claude Code plugin marketplace, a Codex plugin marketplace, and a plain `skills/` tree for `npx skills`.
+Portable agent skills for operating **Nebius AI Cloud** with the `nebius` CLI. One repo serves three channels: a Claude Code plugin marketplace, a Codex plugin marketplace, and a plain `skills/` tree for `npx skills`.
 
-No server, no runtime dependency beyond the `nebius` CLI you already have.
+Most skills use the `nebius` CLI you already have. The Grafana MCP installer also uses Python, Bash and a verified Grafana MCP runtime; explicit skill invocation performs its setup.
 
 > **Status: Phase 1 (private).** Not published anywhere until nebius org approval — see the project plan. Until the repo is public, replace `nebius/skills` in the commands below with a local checkout path or private URL.
 
@@ -20,7 +20,7 @@ No server, no runtime dependency beyond the `nebius` CLI you already have.
 | [nebius-serverless-data-secrets](skills/nebius-serverless-data-secrets/SKILL.md) | S3 volumes, MysteryBox env/registry secrets, injected config files, artifact egress |
 | [nebius-serverless-troubleshooting](skills/nebius-serverless-troubleshooting/SKILL.md) | Job/endpoint diagnosis: states, bounded logs, error catalog with recovery actions |
 | [nebius-serverless-recipes](skills/nebius-serverless-recipes/SKILL.md) | End-to-end playbooks: 1-GPU/multi-GPU training, vLLM serving, batch fan-out, checkpointed & preemptible fine-tuning, GitHub Actions CI |
-| [nebius-grafana-mcp-install](skills/nebius-grafana-mcp-install/SKILL.md) | Human-run Grafana MCP setup for Codex and Claude Code, with a credential proxy and renewal/restart; extra runtime and credential-policy deviation documented. |
+| [nebius-grafana-mcp-install](skills/nebius-grafana-mcp-install/SKILL.md) | Agent-run Grafana MCP installation and verification for Codex and Claude Code, with private credential handling and supervised renewal/reconnection. |
 
 Nebius **Token Factory** (inference / fine-tuning) is intentionally out of scope — it has a separate API and keys. See [Arindam200/nebius-skills](https://github.com/Arindam200/nebius-skills) for that lifecycle.
 
@@ -30,7 +30,7 @@ Every skill ships the same three-tier model, in prose **and** in `allowed-tools`
 
 - **Tier A — read**: `list`/`get`/`get-by-name`/… run freely (pre-approved via `allowed-tools`).
 - **Tier B — gated write**: `create`/`update`/`start`/`stop` — the agent prints the exact command, states effect and cost, and waits for explicit confirmation. Never pre-approved.
-- **Tier C — refuse**: `delete`, `purge`, credential issuance, impersonation — never executed; the command is printed for a human to run.
+- **Tier C — refuse**: `delete`, `purge`, direct credential issuance, impersonation — the command is printed for a human to run. The [Grafana installer exception](SECURITY.md#grafana-installer-exception) permits only its bundled helper and fixed supervisor to handle credentials privately.
 
 Full rationale: [skills/nebius-cloud-basics/references/safety-tiers.md](skills/nebius-cloud-basics/references/safety-tiers.md) and [SECURITY.md](SECURITY.md).
 

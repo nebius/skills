@@ -5,7 +5,10 @@
   "query": "Use nebius-grafana-mcp-install to install for Claude Code, testing-human, https://grafana.example.com/.",
   "expected_behavior": [
     "Use the same runtime with the Claude user-scope adapter.",
-    "Present human-run apply and parent MCP_TIMEOUT=300000 launch guidance.",
-    "Do not run Claude mcp get, expose configuration, or treat Codex invocation metadata as Claude enforcement."
+    "Run bundled apply, which configures user env.MCP_TIMEOUT >=300000 while preserving larger values and unrelated settings.",
+    "Do not run Claude mcp get, expose configuration, or treat Codex invocation metadata as Claude enforcement.",
+    "Ask once for missing non-secret selectors and reuse only a unique validated owned binding.",
+    "Separate registration, helper runtime verification and observed current-chat activation; request reload only when the host requires it.",
+    "Do not use datasource health as the installation readiness gate."
   ]
 }

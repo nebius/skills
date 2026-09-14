@@ -190,6 +190,14 @@ class ReadPolicy:
             raise ProxyError(405, "method-refused")
         if method == "GET" and body:
             raise ProxyError(400, "get-body-refused")
+        health = re.fullmatch(rf"/api/datasources/uid/({UID})/health", path)
+        if health:
+            if method != "GET" or "?" in target:
+                raise ProxyError(403, "health-route-refused")
+            # Resolve the exact UID through the bound Grafana before invoking
+            # its plugin health handler. This is not an installation check.
+            self.datasource(health.group(1), deadline)
+            return self.backend.request("GET", path, deadline=deadline)
         simple = path in {"/api/frontend/settings", "/api/datasources", "/api/search"}
         simple = simple or bool(re.fullmatch(rf"/api/datasources/uid/{UID}|/api/dashboards/uid/{UID}", path))
         simple = simple or bool(re.fullmatch(r"/api/datasources/name/[^/]{1,256}", path))

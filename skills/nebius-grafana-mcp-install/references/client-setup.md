@@ -1,40 +1,52 @@
 # Client setup and recovery
 
-## Human-run setup
+## Agent-run setup
 
-Run from this installed skill directory with an explicit client, human profile
-and trusted HTTPS origin:
+Explicitly invoke the skill for installation. The agent runs the bundled helper
+through `bash scripts/ensure-local-config.sh` from its installed skill directory,
+first with `--check`, then with `--apply`. This entry point checks Python before
+loading the installer.
+For a first installation, supply non-secret selectors when asked:
 
-```bash
-python3 scripts/setup.py --agent codex --user-profile <human-profile> --grafana-url https://<trusted-grafana-host> --check
-python3 scripts/setup.py --agent codex --user-profile <human-profile> --grafana-url https://<trusted-grafana-host> --apply
+```text
+python3 scripts/setup.py --agent codex --user-profile NAME --grafana-url HTTPS_ORIGIN --apply
 ```
 
-Use `--agent claude` for Claude Code. `--check` reports local ownership, file
-presence and bundle integrity. It does not read tokens, authenticate, launch
-MCP or perform a health check. Raw configuration stays inside the helper.
+Use `--agent claude` for Claude Code. Later invocations can omit profile, origin
+and server name when exactly one validated owned binding matches. Discovery
+reads only owned receipts, origin/identity bindings, runtime provenance and
+client registration; it does not inspect credentials or ambient CLI profiles.
+Multiple matches require selection; foreign, malformed, symlinked or drifted
+state is refused. Prepared registration can be resumed. A missing ready entry
+or changed client config root needs explicit selectors for repair.
 
-The human executes `--apply` in a terminal. It inspects collisions, checks CLI
-capabilities, stages a verified binary/runtime, binds the origin and human
-identity, captures token output into a protected file, and registers one client.
-Initial authentication may open the browser. Review the destination carefully:
-explicitly supplying an origin trusts it to receive your Nebius IAM credential.
+`--check` reports local ownership, settings, file presence and bundle integrity.
+It never authenticates, reads tokens, starts MCP or performs a network check.
+Its JSON includes `update_required`; the agent uses `--apply --update` for owned
+repair/update when indicated, or when explicitly asked to renew authentication.
+Missing non-secret fields are reported with exit 2 for one bundled question.
+
+Apply checks CLI capabilities, installs the verified runtime, validates the
+pinned human identity, handles credentials internally, registers one client and
+verifies MCP. The helper may open browser sign-in; the user completes that step.
+No token or login URL is copied into chat. The supplied HTTPS origin must be an
+existing Grafana trusted to receive this human profile's Nebius IAM credential.
+Existing Python, Bash, Nebius CLI and client prerequisites are checked, not
+installed. Missing prerequisites and native permission blocks are reported.
 
 ## Client differences
 
 | Client | Configuration and registration | Startup |
 |---|---|---|
 | Codex | User config.toml, native MCP add/remove and internal JSON inspection; existing CODEX_HOME is honored within the user's home | startup_timeout_sec = 300 |
-| Claude Code | Standard user ~/.claude.json; native --scope user registration and direct internal JSON inspection | Parent MCP_TIMEOUT=300000 |
+| Claude Code | Standard user ~/.claude.json; native --scope user registration and direct internal JSON inspection | User ~/.claude/settings.json env.MCP_TIMEOUT >= 300000 |
 
-For Claude, start a new parent process with:
-
-```bash
-MCP_TIMEOUT=300000 claude
-```
-
-No shell profile, hook or unrelated setting is edited. A running client does
-not acquire a new launch environment automatically.
+Setup writes only Claude's `env.MCP_TIMEOUT` string, preserving a larger valid
+value and all unrelated settings. Malformed settings are refused. Exact-byte
+snapshots and atomic replacement reject concurrent edits without overwriting
+them. No shell profile, permission rule, hook or managed setting is changed.
+A managed override or current-session startup state can still require host
+attention; configured timeout is not proof that the running client has reloaded.
 
 When Claude has no user configuration yet, its native add command also creates
 Claude's initial machine/migration metadata. Existing unrelated configuration
@@ -43,7 +55,7 @@ human inspection before rerunning the same command.
 
 Official references: [Codex MCP](https://developers.openai.com/codex/mcp),
 [Claude MCP](https://code.claude.com/docs/en/mcp), and
-[Claude skill names](https://code.claude.com/docs/en/skills).
+[Claude settings environment](https://code.claude.com/docs/en/env-vars#in-settings-files).
 
 ## Ownership and updates
 
@@ -81,8 +93,20 @@ used by another installation.
 
 ## Readiness
 
-After setup, restart the selected client and verify initialize, list-tools and
-a bounded datasource list on an authorized target. Local registration success
-and offline fixtures do not establish live access or successful future renewal.
-Authentication/entitlement failures never authorize creating keys, service
-accounts, IAM grants or datasources.
+Apply launches the exact owned wrapper in an isolated helper subprocess with a
+300-second overall verification budget. It performs MCP initialize, initialized
+notification, paginated tool discovery and one `list_datasources` call with
+`limit: 1`. Protocol responses and all raw stderr remain internal; only fixed
+progress and result fields reach the agent. Empty datasource lists pass. The
+helper stops and reaps its test connection after success, failure or cancellation.
+
+Successful apply returns registration `ready`, runtime `ready`, activation
+`not checked`. Results also identify the validated server name for host activation.
+Exit 4 means registration is retained but runtime verification
+failed; the agent reports that distinction and the sanitized recovery message.
+The skill separately checks current-chat tool availability, using supported
+reconnect/reload controls if available. Otherwise the user reloads the client.
+Do not terminate the active host or claim same-chat activation from the helper's
+independent connection. Live datasource health is a separate query; unhealthy
+or unsupported plugins do not make installation fail. Authentication failures
+never authorize creating keys, service accounts, IAM grants or datasources.

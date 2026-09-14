@@ -30,6 +30,12 @@ elif args[:2] == ['iam', 'whoami']:
     assert '--profile' in args
     assert not os.environ.get('NEBIUS_IAM_TOKEN')
     assert not os.environ.get('NEBIUS_PROFILE')
+    if os.environ.get('FAKE_BROWSER_MARKER'):
+        marker = pathlib.Path(os.environ['FAKE_BROWSER_MARKER'])
+        if not marker.exists():
+            assert '--no-browser' not in args
+            print('SENTINEL-LOGIN https://login.example.test/?secret=synthetic', file=sys.stderr)
+            marker.write_text('synthetic sign-in completed')
     user = 'user-example'
     if os.environ.get('FAKE_CHANGED_ID'):
         user = 'changed-example'
@@ -48,7 +54,7 @@ else:
 '''
 
 MCP = r'''#!/usr/bin/env python3
-import hashlib, json, os, pathlib, sys
+import hashlib, json, os, pathlib, sys, time, urllib.request
 assert sys.argv[1:] == ['--transport', 'stdio', '--disable-write', '--disable-proxied', '--enabled-tools', 'search,datasource,dashboard,prometheus,loki,api', '--max-loki-log-limit', '20']
 assert not os.environ.get('NEBIUS_IAM_TOKEN')
 assert os.environ['GRAFANA_URL'].startswith('http://127.0.0.1:')
@@ -62,6 +68,9 @@ with pathlib.Path(os.environ['FAKE_MCP_LOG']).open('a') as f:
     f.write(json.dumps(event) + '\n')
 for line in sys.stdin:
     request = json.loads(line)
+    if os.environ.get('FAKE_PROTOCOL_LOG'):
+        with pathlib.Path(os.environ['FAKE_PROTOCOL_LOG']).open('a') as f:
+            f.write(json.dumps(request) + '\n')
     if 'id' not in request:
         continue
     if request.get('method') == 'initialize':
@@ -70,7 +79,28 @@ for line in sys.stdin:
     elif request.get('method') == 'tools/list':
         result = {'tools': [{'name': 'list_datasources', 'inputSchema': {'type': 'object'}}]}
     else:
-        result = {'content': [{'type': 'text', 'text': '[]'}]}
+        data = {'datasources': [], 'total': 0, 'hasMore': False}
+        if os.environ.get('FAKE_MCP_HTTP'):
+            req = urllib.request.Request(os.environ['GRAFANA_URL'] + 'api/datasources',
+                headers={'Authorization': 'Bearer ' + os.environ['GRAFANA_SERVICE_ACCOUNT_TOKEN']})
+            with urllib.request.urlopen(req, timeout=3) as response:
+                sources = json.load(response)
+            data = {'datasources': sources[:1], 'total': len(sources), 'hasMore': len(sources) > 1}
+        result = {'content': [{'type': 'text', 'text': json.dumps(data)}]}
+    mode = os.environ.get('FAKE_MCP_MODE')
+    if mode == 'stall':
+        time.sleep(30)
+    if mode == 'wrong-id':
+        request['id'] = 1000
+    if mode == 'missing-tool' and request['method'] == 'tools/list':
+        result = {'tools': []}
+    if mode == 'tool-error' and request['method'] == 'tools/call':
+        result = {'isError': True, 'content': [{'type': 'text', 'text': 'SENTINEL-SECRET https://login.example.test/?secret=sentinel'}]}
+    if mode == 'oversized':
+        print('x' * (9 * 1024 * 1024), flush=True)
+    if mode == 'protocol-error':
+        print(json.dumps({'jsonrpc': '2.0', 'id': request['id'], 'error': {'code': -1, 'message': 'SENTINEL-SECRET'}}), flush=True)
+        continue
     print(json.dumps({'jsonrpc': '2.0', 'id': request['id'], 'result': result}), flush=True)
 '''
 
@@ -200,10 +230,13 @@ class FakeSystem:
             raise SetupError("Injected interruption after native add.")
         return b""
 
-    def apply(self, layout=None, update=False):
+    def apply(self, layout=None, update=False, verify=False):
         layout = layout or self.layout()
-        setup.apply(layout, self.source, update=update, run=self.run, env=self.env,
-                    binary_provider=self.binary, workdir=self.home)
+        # Existing runtime tests need registration as fixture setup. New installer
+        # tests explicitly exercise the production verifier, including HTTP.
+        self.result = setup.apply(layout, self.source, update=update, run=self.run, env=self.env,
+                                  binary_provider=self.binary, workdir=self.home,
+                                  verifier=setup.readiness.verify if verify else lambda *args, **kwargs: None)
         return layout
 
     def runtime_command(self, layout=None):

@@ -51,5 +51,5 @@ def binding(state, home, value, *, create=False):
     elif create:
         atomic_write(path, json_bytes(expected), home)
     else:
-        raise SetupError("Grafana origin binding is missing; human-run setup is required.")
+        raise SetupError("Grafana origin binding is missing; invoke nebius-grafana-mcp-install to run setup.")
     return value

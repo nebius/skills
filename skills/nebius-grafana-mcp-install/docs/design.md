@@ -2,84 +2,78 @@
 <!-- maintain-project-specs:design:start schema=maintain-project-specs/design-v2 -->
 # Project Design
 
-<!-- FEATURE: FEAT-001 reqs=REQ-001 status=ready delivery=verified priority=P0 version=10 -->
-### FEAT-001: Shared setup and supervised credential proxy
+<!-- FEATURE: FEAT-001 reqs=REQ-001 status=ready delivery=verified priority=P0 version=11 -->
+### FEAT-001: Agent-run setup and supervised credential proxy
 
 #### Requirements Covered
 
-- REQ-001: Self-contained human-operated Grafana MCP installation.
+- REQ-001: Self-contained agent-run Grafana MCP installation.
 
 #### Context Evidence
 
-Accepted design retains the official Grafana MCP and existing hosted Grafana. Direct API and separately launched installed-MCP datasource reads succeeded using an existing protected token; those probes do not prove this new implementation. Upstream v1.4.0 reapplies authorization through its HTTP transport and supports no outbound redirect restriction. Proxied discovery requires explicit disablement because startup may issue MCP availability DELETE probes.
+The prior implementation used a human terminal handoff and passed 70 synthetic tests. Review identified an advertised datasource health tool whose exact upstream route was blocked by the proxy. Existing shared policy also prohibited this installer workflow. The accepted revision changes those contracts, leaves CI unchanged and permits browser sign-in and client reload only when necessary.
 
 #### Design Details
 
-Human setup takes --agent codex|claude, --user-profile and --grafana-url, with --check as the local-only default, --apply for installation, optional --mcp-server-name and explicit --update for credential renewal and an exactly owned update. Use Python 3.11+ standard library and the existing Bash supervisor. Bind a canonical HTTPS origin, human identity and client/server/profile state in private files. Code is content-addressed and release artifacts remain checksum-verified for macOS/Linux ARM64/x86-64. Changing a bound origin or identity is refused. Server names use 1-64 letters, digits, underscores or hyphens and start with a letter or digit; setup rejects names outside the existing runtime contract before preflight or authentication.
+Keep the Python 3.11+ standard library, Bash supervisor, pinned MCP 1.4.0 and native Codex/Claude clients. No model, framework or new autonomous agent is added. The existing host agent gathers non-secret selectors, invokes the fixed helper and reports sanitized outcomes; all credential and installation logic is deterministic code.
 
-The supervisor launches a loopback HTTP proxy and stock MCP in one owned runtime. A random ephemeral local credential authenticates MCP requests; only the proxy holds the frozen Nebius token generation. The proxy uses verified TLS, no ambient proxies or redirects, fixed origin-relative read paths, bounded finite bodies and requests, and only validated Prometheus query/query_range/labels POST routes. Datasource UIDs must come from authenticated discovery; a constant bounded query establishes Prometheus route compatibility without relying on plugin names. Other mutations, streaming, redirects and arbitrary plugin paths are refused. A complete-frame stdio guard withholds malformed, oversized or credential-reflecting output; subprocess diagnostics never pass through.
+Retain --agent codex|claude, --check (default), --apply, --update and --mcp-server-name. Allow missing profile/origin/server selectors only when a unique validated installer-owned binding supplies them. Never infer a trusted destination from ambient profiles or another installer's config. Explicit conflicting selectors fail before authentication. Check reads no tokens, changes no files and starts no runtime. Agent invocation runs apply and selects update only when owned state requires it.
 
-Fixed MCP options are --transport stdio --disable-write --disable-proxied --enabled-tools search,datasource,dashboard,prometheus,loki,api --max-loki-log-limit 20. Tempo uses fixed GET query/tag/trace routes. Each connection freezes one token generation. Reuse tokens observed within one hour, schedule renewal at ten hours, stop by eleven hours using wall and monotonic bounds, and retain the original observation time for repeated bytes. These are operational caps, not authoritative issuance/expiry. Renewal is noninteractive and bounded; successful rotation exits 75 and the next connection loads the new generation. Failed renewal stops safely with human authentication guidance.
+Setup checks prerequisites, validates ownership, materializes immutable code, acquires the checksum-verified executable, validates the pinned human identity, acquires credentials internally and registers the chosen client. The helper opens the official browser when authentication is needed; raw CLI output and login URLs stay internal. Bounded progress and structured final results expose only fixed statuses and safe remediation messages. The agent never reads token files, runs token commands itself or weakens native permissions.
 
-Keep both native client adapters, exact ownership recovery and unrelated configuration preservation. A first Claude registration may create native initialization metadata only when no configuration existed; existing unrelated values remain protected. Codex startup timeout remains 300 seconds. Claude parent MCP_TIMEOUT remains 300000. Public examples contain only placeholders. Remove the source approval gate and replace maintainer prerequisites with operational documentation that explicitly identifies the unchanged credential-policy, runtime dependency and root-eval-placement discrepancies.
+Configure Codex startup_timeout_sec=300. For Claude, atomically patch only user settings env.MCP_TIMEOUT to at least 300000 milliseconds, retaining a larger valid value and all unrelated values. Snapshot before authentication and recheck before every mutation; a concurrent edit is retained and reported. Record installation separately from readiness so a verification failure can leave recoverable owned configuration without a false success claim.
 
-Targeted CR003/CR004 repair: capture the writer PID with an explicit exec of Python os.getppid in command substitution before acquiring the directory lock, validate its process-start identity, and keep writer variables separate from inspected lock-owner variables. Remove owner-pid.tmp creation and deletion; retain the existing owner metadata format and exact cleanup checks. Existing residue requires human-confirmed quiescence and exact cleanup, with no automatic migration. Require token_file_is_fresh before concurrent reuse succeeds. Incomplete metadata causes owned lock cleanup, a sanitized error and return 1, allowing background retries while foreground setup fails. Do not synthesize metadata or alter token ages.
+After registration, a bounded helper subprocess launches the exact owned wrapper and performs initialize, initialized notification, tools/list and one list_datasources call. Validate responses internally, then stop and reap its owned process group. Never relay MCP payloads or stderr to the agent. The host agent separately verifies actual current-session availability when supported; otherwise request reload without killing the active client. Registration, independent runtime verification and host activation are separate evidence lanes.
 
-The selected scope retains directory locking. Replacing it with kernel locking and proving age-based recovery safe against a paused initializer are explicitly separate work. CLI, client adapters, token metadata schema, deadlines, credential policy and installation methods remain fixed.
+Extend only exact `GET /api/datasources/uid/<uid>/health`, without body or query, and verify the UID through the bound Grafana first. Preserve same-origin TLS, redirect rejection, finite limits, private authentication and output guards. Do not invoke bulk datasource health during installation; an unhealthy or unsupported datasource is not an installation failure. Keep the advertised tool and fixed read-only MCP categories including --disable-proxied.
+
+Retain existing protected token files, immutable origin/identity binding, frozen connection generations, one-hour reuse, ten-hour renewal and eleven-hour operational caps. These are observation-based limits, not authoritative expiry. Rotation exits 75 and may require reconnecting. Preserve the existing directory-lock repair and explicit recovery boundary; do not invent token ages or delete unknown residue.
 
 #### Selected Option
 
-A self-contained human-operated installer with a bundled credential proxy, deterministic supervised renewal and restart-based stdio. The host agent explains setup and performs credential-free inspection; it does not execute the credential-issuing setup workflow.
+Agent-run deterministic installer under a narrow canonical policy exception, exact health-route support and separate installation/runtime/activation results.
 
 #### Alternatives Considered
 
-Direct MCP authentication cannot enforce exact-origin credential forwarding. A new Grafana deployment or direct observability server is unnecessary for the selected hosted-Grafana topology. A permanent maintainer approval switch prevents useful operator software and does not resolve repository policy.
+The manual terminal handoff does not meet the requested experience. Hiding datasource health avoids forwarding but removes useful functionality. Broad proxy route access and an unconditional safety claim are rejected. Replacing the existing stack or stdio transport is unnecessary.
 
 #### Implementation Boundaries
 
-Only this skill tree, one root README row and the root changelog entry for this skill. Preserve root policy, plugin manifests, root evals, CI, donor source and current installed client/auth state. No claim that skill-local prose overrides SECURITY.md.
+Change the skill, relevant root docs/policy and generated preambles. Preserve CI, root evals, plugin manifests, donor source and actual installed client/auth state. Existing prerequisites are checked, not installed. PR 8 remains Draft until separately requested otherwise.
 
 #### Test-First Success Criteria
 
-- TDD-001: Missing/malformed origin or changed binding fails before authentication or file mutation; check/help remain credential-free.
-- TDD-002: Synthetic proxy fixtures prove local authentication, exact-origin forwarding, no redirect leakage, read-route enforcement, custom datasource handling and private output.
-- TDD-003: Both adapters, immutable packaging, partial recovery, repeated bytes, frozen connection deadlines, rotation, cancellation and worker supervision retain their guarantees.
+- TDD-001: Reproduce health-route refusal before repair, then prove healthy/error/unsupported responses and all route restrictions.
+- TDD-002: Prove both-client automatic setup, owned selector resolution, missing/ambiguous input handling, timeout preservation, interrupted recovery and drift refusal with isolated fixtures.
+- TDD-003: Inject credentials/login URLs into subprocess failures and protocol responses; no agent-visible output may contain them. Bound malformed, oversized, missing or stalled MCP responses and reap descendants.
 
 #### Validation Plan
 
-Run focused unit/HTTP/stdio fixtures, Python/Bash/Markdown checks, full repository validation, risk review and alignment. Preserve separate evidence for source, temporary native-client registrations and live compatibility.
+Run scoped Python/Bash checks, full skill-local suite, root structural validation, read-only risk review and align. Do not add CI jobs or claim source tests establish live activation.
 
 #### Test Plan
 
-Use isolated homes and synthetic credentials. Test actual HTTP requests and MCP framing, redirects toward a second fixture server, oversized/malformed/secret-reflecting output, UID validation, method restrictions, concurrent refresh and process cleanup. Existing live credentials may be used only for the separately authorized bounded read-only proxy acceptance check; do not mint or modify credentials for development.
+Use fake Nebius/client/MCP executables, local HTTP fixtures and temporary homes. Verify actual protocol exchange, fixed MCP arguments, current config attestation, health forwarding and output privacy. Retain cancellation, rotation, concurrency and immutable-bundle regressions. Native-client verification uses disposable homes and synthetic auth only; real authentication is outside development scope.
 
 #### Evaluation Plan
 
-Update local scenarios for human-run setup and private token handling. Keep six trigger examples and at least three behavioral scenarios; root CI does not execute these skill-local evaluations. Fresh agent triggering and comparative model quality require separate evaluation.
+Update local scenarios for explicit invocation, non-secret questions, browser sign-in, automatic apply/update, protected output, client reload and unrelated-registration refusal. Model evals remain separate from deterministic tests; CI remains unchanged.
 
 #### Rollout And Rollback
 
-Human-run setup materializes immutable bundles and creates exact owned user-scoped MCP entries. Re-run check to inspect; update only with explicit --apply --update. Existing foreign registrations and changed bindings are refused. Operator utility is functional without a maintainer switch, while repository policy discrepancies remain explicitly documented.
+Return PR 8 to Draft, update the current branch and retain immutable runtime bundles. Repeated skill invocation reconciles only owned state. Do not automatically delete state, restore old credentials or terminate active clients. A readiness failure retains independently verified registration with a clear failure status.
 
 #### Done Definition
 
-Scoped implementation and passing focused verification with documentation aligned. Distinguish remaining live/runtime evidence gaps and policy discrepancies from code completion.
+The approved source and policy changes pass focused verification and alignment. The final report states PR draft state and distinguishes local/source proof from any unperformed live/browser/current-client activation checks.
 
 #### Implementation Evidence
 
-Implemented self-contained setup, origin binding, immutable runtime inventory, credential proxy, full-frame bridge, fixed MCP flags, observation metadata and process-group supervision. Removed the permanent policy gate and replaced maintainer prerequisites with operational/policy documentation. Scope is this skill tree, one root README row and the root changelog entry for this skill; donor source and installed client/auth state were preserved.
+Implemented agent-run bundled setup with owned selector reuse, sanitized progress/results, automatic Claude settings, private MCP readiness and exact datasource health forwarding. Updated the canonical shared policy, generated preambles, README/changelog and local behavior scenarios. Added tests for input reuse, configuration drift, browser-mode authentication, protocol failures and process cleanup. CI, root evals, plugin manifests and installed/live state are unchanged.
 
 #### Verification Evidence
 
-Publication validation passed all 70 offline tests on macOS in 105.631 seconds, including the two security-hardening tests for early invalid-name refusal and both-client valid-name preservation. The root changelog records the new skill and its explicit runtime/policy deviations. Repository validation and scoped lint/syntax checks passed; no live authentication or existing client configuration was changed.
-
-68 offline tests passed on macOS in 106.353 seconds. CR001/CR002 GNU stat and source-update inspection fixes retain their earlier focused coverage. Targeted CR003/CR004 repairs now pass seven additional tests: foreground/background PID-capture crashes leave no blocking artifact and a subsequent renewal succeeds; both writer identities match live owning shells; incomplete concurrent publication fails foreground refresh without changing that generation and permits background retry to publish a complete generation and exit 75; pre-fix PID residue remains for human recovery. The four defect-specific controls failed for the original reasons before repair and passed afterward. Writer inspection uses a bounded synthetic mint barrier, avoiding timing or CLI-help-count assumptions.
-
-The implementation captures validated writer identity before acquiring the directory lock, removes PID-temp creation/deletion, and requires token_file_is_fresh before concurrent reuse success. Invalid metadata returns 1 after owned lock cleanup, preserving background retry control flow without rewriting the incomplete pair. Scoped lint, syntax, wiring, changed-scope alignment and follow-up code/security review passed. The generic structure validator retains its documented root-relative shared-marker false positive; repository preamble/frontmatter checks pass. Current Codex/Claude installations, credentials and donor files were preserved.
-
-CR003/CR004 are verified within the explicitly selected targeted scope. Existing PID residue requires human recovery after quiescence; no automated migration was added. Directory-lock replacement and proving age-based incomplete-lock recovery safe against a paused initializer remain separate work. GNU stat coverage on macOS does not prove full Linux execution.
-
-Earlier implementation evidence includes native Codex/Claude registration, repeat apply and local inspection in isolated temporary homes, and a locked official MCP1.4.0 initialize/tools-list/datasource read through the new proxy using an existing protected credential without issuance or configuration changes. That evidence was not rerun for the current repairs. Prior repository validation passed; the generic skill validator has one documented root-relative shared-marker false positive. Live renewal, fresh skill triggering, Linux execution and comparative model quality were not run. The preceding alignment repaired malformed Prometheus probe handling and runtime help. See references/validation.md for evidence boundaries. DNS establishment is subject to OS resolver/socket behavior; total establishment duration is not strictly bounded. Same-user access and unchanged repository-policy discrepancies remain explicit.
+Revision verification: the full 92-test synthetic suite passed in 147.559 seconds, including strengthened paused-wrapper cleanup and malformed-binding regressions. Both actual native client CLIs passed registration, repeat apply, owned reuse, local check and synthetic runtime verification in temporary homes. Root validation, Ruff, ShellCheck, syntax/JSON and diff checks passed; Markdown has no introduced diagnostics relative to the baseline with documented style exclusions. Independent code/security review reproduced and verified repairs for origin selection and stopped-wrapper cleanup. The subsequent explicit alignment review found no additional code or security defects. Live authentication/Grafana access, Linux execution, live renewal, fresh model invocation and current-client activation are not claimed. See references/validation.md for evidence boundaries.
 
 <!-- /FEATURE: FEAT-001 -->
 <!-- maintain-project-specs:design:end -->

@@ -1,6 +1,6 @@
 # Nebius Grafana MCP Install
 
-A self-contained, human-operated installer for local Codex and Claude Code,
+A self-contained, agent-run installer for local Codex and Claude Code,
 adapted from the Apache-2.0
 [donor skill](https://github.com/nebius/nebius-ps-services/tree/a1d6ef7a0192072cf541891c78d3460a1b86a5e7/skills/install-grafana-mcp-for-nebius).
 
@@ -9,11 +9,11 @@ Grafana through a bundled credential proxy. The proxy holds the Nebius token,
 verifies TLS, refuses redirects and permits only bounded read requests.
 A successful token rotation requires a new MCP connection.
 
-**Repository policy deviation:** private token persistence and recurring token
-issuance remain outside the unchanged repository credential rules. The human
-runs setup; the agent does not execute its credential workflow. The executable
-has no permanent approval switch. See [runtime security](references/runtime-security.md)
-for the exact boundary and contribution discrepancies.
+Explicit skill invocation authorizes bundled setup and its fixed supervised
+renewal under the repository's narrow credential-handling exception. Credentials
+stay in helper/runtime processes and protected private state; sanitized results
+keep the token out of agent context in the supported workflow. Same-user OS
+access remains possible. See [runtime security](references/runtime-security.md).
 
 ## Install the skill, then configure MCP
 
@@ -27,15 +27,14 @@ Skill installation does not run MCP setup. Explicitly invoke
 `/nebius-grafana-mcp-install` for a standalone skill or
 `/nebius-cloud:nebius-grafana-mcp-install` in the plugin.
 
-Run from the installed skill directory in your own terminal:
+The agent checks prerequisites, asks once for missing non-secret inputs, and
+runs setup automatically. Later invocations reuse a unique validated owned
+binding. You may need to complete browser sign-in or reload the client when it
+cannot activate a new MCP registration in the current session. No manual setup
+command or token copying is needed.
 
-```bash
-python3 scripts/setup.py --agent codex --user-profile <human-profile> --grafana-url https://<trusted-grafana-host> --check
-python3 scripts/setup.py --agent codex --user-profile <human-profile> --grafana-url https://<trusted-grafana-host> --apply
-```
-
-Use `--agent claude` for Claude Code. The URL must be an existing Grafana that
-you trust to receive your Nebius IAM token and that supports this authentication.
+Supply a human Nebius profile and an existing trusted HTTPS Grafana origin when
+asked. That Grafana must accept your Nebius IAM credential.
 The installer does not deploy Grafana or configure its data sources.
 A public observability datasource read endpoint is not a Grafana API endpoint.
 Custom `--mcp-server-name` values start with a letter or digit and contain
@@ -52,7 +51,7 @@ setup commands or local state changes.
   user's home.
 - Official Grafana MCP 1.4.0, reused only with verified Homebrew provenance or
   installed from the locked official archive. No global package upgrades.
-- A human-supplied HTTPS Grafana origin, bound privately to the installation.
+- A human-supplied HTTPS Grafana origin, bound privately to the installation and reused on later invocations.
   Origin and identity changes require a distinct installation name.
 
 The proxy is an ephemeral loopback listener owned by the MCP connection. It has
@@ -69,6 +68,14 @@ Renewal avoids PID temporary files and rejects incomplete concurrent token
 generations. Background failures retain bounded retries. When updating a pre-fix
 runtime, stop writers sharing its state and follow the authentication recovery
 instructions for any existing lock residue; it is not automatically deleted.
+
+Setup configures Codex's per-server 300-second startup timeout and Claude's user
+`env.MCP_TIMEOUT` to at least 300000 milliseconds, preserving a larger valid
+value and unrelated settings. It verifies initialization, tool discovery and one
+bounded datasource list in a private subprocess. Registration, this runtime
+check and current-chat tool availability are reported separately. Datasource
+health results, including unsupported plugin checks, do not determine whether
+installation succeeded.
 
 ## Validation
 

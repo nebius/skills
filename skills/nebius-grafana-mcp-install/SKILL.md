@@ -1,11 +1,11 @@
 ---
 name: nebius-grafana-mcp-install
-description: Prepares Grafana MCP setup for Nebius in Codex or Claude Code when the user explicitly requests installation, local checks or an owned update. Provides a human-run installer with a private credential proxy and renewal/restart. Not for observability queries or agent-run credential issuance.
+description: Installs and verifies Grafana MCP for Nebius in local Codex or Claude Code on explicit invocation. Runs bundled setup, reuses owned bindings and handles credentials privately with supervised renewal/reconnection. Also supports credential-free checks and owned updates. Not for telemetry queries, IAM repair or direct agent token commands.
 license: Apache-2.0
-compatibility: Requires local macOS/Linux, Bash, Python >=3.11, nebius CLI >=0.12.247 with bounded authentication options, and Codex CLI or Claude Code. Human setup installs verified mcp-grafana 1.4.0.
+compatibility: Requires local macOS/Linux, Bash, Python >=3.11, nebius CLI >=0.12.247 with bounded authentication options, and Codex CLI or Claude Code. Bundled setup installs verified mcp-grafana 1.4.0.
 metadata:
   version: "0.1.0"
-  status: human-operated
+  status: agent-run
 allowed-tools:
   - Bash(nebius version:*)
   - Bash(nebius profile list:*)
@@ -30,7 +30,7 @@ authorization.
 
 ## Purpose
 
-Prepare read-only access to an existing, explicitly trusted Nebius Grafana for
+Install and verify read-only access to an existing, explicitly trusted Nebius Grafana for
 one local Codex or Claude Code client and one human Nebius profile.
 
 <!-- BEGIN SHARED PREAMBLE (generated from shared/preamble.md — edit there, then run scripts/sync-shared.py) -->
@@ -51,7 +51,7 @@ nebius config get tenant-id    # tenant-...
 
 These skills require CLI `0.12.247` or newer; an individual skill may state a higher floor (the Serverless skills need `0.12.265`) — the stricter number wins. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
 
-If any check fails or an ID comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and the shown federation-profile command opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call, and re-auth is the same human task.
+If any check fails or an ID comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and the shown federation-profile command opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call. The Grafana installer exception below owns its browser authentication; other skills retain the human re-authentication handoff.
 
 **Resolve context first — never guess IDs.** Nearly every call needs `--parent-id`, and the CLI does not say which scope it wants:
 
@@ -75,96 +75,114 @@ Compute resources are generally **project**-scoped; public-image discovery is re
 |---|---|---|
 | A — read | `list`, `get`, `get-by-name`, `batch-get`, `list-*`, `logs`, `--help` | Run freely. |
 | B — gated write | `create`, `update`, `start`, `stop`, quota/capacity allowance changes | Print the fully resolved command verbatim, state what it changes and the cost implication, wait for explicit user confirmation, then run it exactly once. Never batch mutations; never retry one after an ambiguous failure. |
-| C — refuse | `delete`, `purge`, credential issuance (`iam get-access-token`, access keys; sole exception: `iam auth-public-key generate` is Tier B), `-I`/`--impersonate-service-account-id` (a global flag, valid on *every* command — including otherwise-free reads) | Do not run. Print the exact command for the human to run themselves and explain the blast radius. |
+| C — refuse | `delete`, `purge`, credential issuance (`iam get-access-token`, access keys; `iam auth-public-key generate` is Tier B; bounded Grafana installer exception below), `-I`/`--impersonate-service-account-id` (a global flag, valid on *every* command — including otherwise-free reads) | Do not run. Print the exact command for the human to run themselves and explain the blast radius. |
 
-**Secrets.** Never print or persist tokens, access keys, or the contents of `~/.nebius/credentials.json`.
+**Grafana installer exception.** Explicit invocation of `nebius-grafana-mcp-install` to install or update authorizes the agent to run that skill's bundled setup helper for the selected local client, human profile and trusted HTTPS Grafana origin. Its helper owns prerequisite checks, browser authentication when needed, private token capture, verified runtime installation, client registration and bounded MCP verification; use that workflow instead of the generic CLI checks above. Its fixed supervised runtime may renew the same pinned human identity. This exception permits only helper-owned credential handling and mode-0600 private token state. It does not permit direct agent token commands, credential inspection, copying the credential workflow, other credential/IAM operations or changes to native permission controls. Check-only intent remains non-mutating. Other skills retain the tier rules above.
+
+**Secrets.** Never expose tokens, access keys or `~/.nebius/credentials.json` contents to agent context, tool output, chat, logs or repository files. Never persist them except in the Grafana installer's narrowly defined private runtime state. No broad helper/interpreter permission grant is allowed.
 <!-- END SHARED PREAMBLE -->
 
 ## Invocation Policy
 
-This skill requires explicit invocation. Prepare installation only when the user
-explicitly asks to install, check or update this MCP integration.
+Explicitly invoking this skill to install or update authorizes its bundled
+setup workflow. The agent runs setup; the user does not copy terminal commands.
+Check-only requests remain credential-free and non-mutating. Installing the
+skill folder alone does not install or activate MCP.
 
-## Operator boundary
+## Credential boundary
 
-Installing this skill distributes instructions and helpers; it does not install
-or activate MCP. Read the [operator and policy boundaries](references/runtime-security.md).
-The human runs setup and initial authentication in their terminal. The agent may
-run `--check`, explain results and present the resolved setup command. Do not
-execute `--apply`, start credential renewal, read token files, reproduce the
-credential workflow or modify permission controls from the agent.
-
-The helper is functional without a maintainer switch. Its private token storage
-and automatic renewal remain explicit deviations from the repository's unchanged
-credential policy. These instructions do not declare an exception approved.
+The bundled helper and supervised runtime handle credentials internally. They
+never place the Nebius token in agent-visible tool output, prompts, chat, logs
+or documentation. The agent must never read token files, run token commands
+directly, or reproduce that workflow. The helper stores credentials in protected
+private files and sends them only to the validated, trusted Grafana origin.
+This protects the supported workflow; it is not isolation from other processes
+running as the same OS user. Read [runtime security](references/runtime-security.md).
 
 ## Workflow
 
-1. Require explicit installation/check/update intent and an explicit client,
-   human profile and trusted HTTPS Grafana origin. The operator must establish
-   that this Grafana accepts their Nebius IAM credential. Do not infer these
-   inputs from old installations, ambient profiles or unrelated project IDs.
-2. Read [client setup](references/client-setup.md). From this installed skill
-   directory, perform credential-free local inspection with quoted arguments:
+1. Select the current local client (`codex` or `claude`) from the host context.
+   Ask only if the client is ambiguous. Read [client setup](references/client-setup.md).
+   Run the bundled helper from this installed skill directory, using quoted
+   arguments and only non-secret selectors already supplied by the user:
 
    ```bash
-   python3 scripts/setup.py --agent codex --user-profile <human-profile> --grafana-url https://<trusted-grafana-host> --check
+   bash scripts/ensure-local-config.sh --agent codex --check
    ```
 
-   Use `--agent claude` for Claude Code. Check never authenticates, reads tokens,
-   starts MCP or performs a network health check. Never print raw client config,
-   credential bindings, environment values or private state contents.
-3. Explain the concrete local file effects and show the same command with
-   `--apply` for the human to execute. Setup downloads or verifies the pinned
-   binary, binds the origin and human identity, prepares protected token state,
-   and registers only the selected client. It creates no cloud resources.
+   Use `--agent claude` for Claude Code. The helper reuses a unique validated
+   installer-owned binding. If it reports missing or ambiguous inputs, ask once
+   for the requested human profile, trusted HTTPS Grafana origin and, when
+   necessary, installation name. The user must establish that this Grafana
+   accepts their Nebius IAM credential. Never infer the origin from ambient
+   profiles, unrelated client config, old donor installations or project IDs.
+2. Check-only intent ends after reporting the helper's local result. For install
+   or update intent, explain briefly that setup installs a verified runtime,
+   prepares private credentials, updates this client's user settings and checks
+   connectivity. Then **run** the helper with `--apply`; the explicit invocation
+   already authorizes this workflow. Supply missing selectors as arguments:
+
+   ```bash
+   bash scripts/ensure-local-config.sh --agent codex --user-profile <human-profile> --grafana-url https://<trusted-grafana-host> --apply
+   ```
+
+   Reused bindings need only `--agent` and `--apply`. Include `--update` when the
+   local check reports `update_required: true`, or the user explicitly requests
+   an owned update or authentication recovery. Missing prerequisites are reported
+   for the user to install; do not bootstrap Python, the CLI or the client.
+3. Let the helper perform authentication and setup. Tell the user to complete
+   browser sign-in only if needed. Do not inspect CLI credentials, copy login
+   URLs, expose raw configuration or run the wrapper's private renewal action.
+   Consume only the helper's sanitized progress and JSON result. Preserve native
+   permission controls; explicit invocation does not bypass a host permission
+   prompt. If the host blocks execution, report its concrete blocker.
 4. Reuse only exactly owned state. A donor/unrelated registration is a collision:
-   select a distinct `--mcp-server-name`. Never adopt its credentials or change
-   the source/installed donor skill. An owned update requires `--apply --update`;
-   unexpected configuration or origin changes are refused.
-5. Report local setup separately from live readiness. The human restarts the
-   selected client; verify MCP initialization and a bounded datasource list
-   only on an authorized target. The default server name is `grafana-nebius`.
-   Setup does not authorize datasource, IAM or dashboard mutations.
-6. Read [authentication lifecycle](references/auth-lifecycle.md) for renewal or
-   restart-required status. Rotation ends the connection with exit 75. Reconnect
-   to load the new generation; never promise automatic same-chat recovery,
-   authoritative expiry or uninterrupted operation beyond twelve hours.
+   select a distinct `--mcp-server-name`. Configuration, identity or origin drift
+   is refused. Never adopt credentials, overwrite unrelated settings, delete lock
+   residue or modify another installed skill to complete setup.
+5. Report registration, independent runtime readiness and current-chat activation
+   separately. Setup verifies MCP initialization, tool discovery and one bounded
+   datasource list; an empty list is valid. It does not grade datasource health.
+   If the host supports safe MCP reconnect/reload, use it and verify the expected
+   server's tools. Otherwise ask for a client reload, then verify availability.
+   Never kill the active host or claim the tools are active before observing them.
+   A runtime verification failure retains owned registration and reports failure;
+   it does not authorize IAM grants, datasource changes or authentication bypass.
+6. Read [authentication lifecycle](references/auth-lifecycle.md) for recovery.
+   Rotation ends the connection with exit 75; reconnect to load the new generation.
+   Do not promise automatic same-chat recovery, authoritative expiry or indefinite
+   human-login renewal. Ordinary observability queries are a separate task.
 
 ## Public helper interface
 
 ```text
-python3 scripts/setup.py --agent codex|claude --user-profile NAME
-                        --grafana-url HTTPS_ORIGIN [--check | --apply]
+python3 scripts/setup.py --agent codex|claude [--user-profile NAME]
+                        [--grafana-url HTTPS_ORIGIN] [--check | --apply]
                         [--mcp-server-name NAME] [--update]
 ```
 
 `bash scripts/ensure-local-config.sh` exposes the same arguments and checks Python.
 
-- `--agent`: exactly one local client; run twice to configure both.
-- `--user-profile`: explicitly selected human Nebius CLI profile.
-- `--grafana-url`: trusted HTTPS origin receiving that profile's credential.
-- `--check`: default, non-mutating local inspection with no credential access.
-- `--apply`: human-run installation and protected credential setup.
-- `--mcp-server-name`: default `grafana-nebius`; 1-64 letters, digits, `_`, `-`, starting with a letter or digit.
+- `--agent`: one local client; run twice only when both clients were requested.
+- `--user-profile`: human Nebius CLI profile; omit to reuse a unique owned binding.
+- `--grafana-url`: trusted HTTPS origin; omit to reuse a unique owned binding.
+- `--check`: default, local inspection without credential access or MCP startup.
+- `--apply`: install, authenticate, register and independently verify MCP.
+- `--mcp-server-name`: reuse an owned name or default to `grafana-nebius`; 1-64 letters, digits, `_`, `-`, starting with a letter or digit.
 - `--update`: with apply, renew credentials and update an exactly owned installation.
 - `-h`, `--help`: help only. No additional public flags.
 
-Exit statuses: 0 local configuration ready, 3 setup/update needed, 1 failure,
-2 invalid arguments, 130 cancellation. Runtime exit 75 requests reconnection.
+Exit statuses: 0 local check matches or apply verified, 3 setup/update needed,
+4 registered but runtime verification failed, 1 failure, 2 missing/invalid inputs,
+130 cancellation. Runtime exit 75 requests reconnection.
 
 ## Boundaries
 
-The shared runtime owns the proxy, verified binary and renewal. Client adapters
-own registration and startup settings. The proxy holds the Nebius token; MCP
-receives a temporary local credential. Modes 0700/0600 and guarded output reduce
-exposure; another process under the same OS user can still read private files.
-
-Codex metadata disables implicit invocation; explicit intent is required in
-both clients. Claude support means Claude Code, not Desktop/Cowork/cloud agents.
+Codex metadata disables implicit invocation; explicit intent is required in both
+clients. Claude support means Claude Code, not Desktop/Cowork/cloud agents.
 No companion skill or donor repository is required. Service-account/static-key
-setup, impersonation, datasource provisioning and ordinary telemetry analysis
-are outside this skill. Never broaden allowed-tools for credential helpers.
+setup, impersonation, datasource provisioning and telemetry analysis are outside
+this skill. Never broaden allowed-tools for credential helpers.
 
 ## Learning Loop
 

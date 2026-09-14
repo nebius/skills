@@ -1,6 +1,6 @@
 interface:
   display_name: "Nebius Grafana MCP Install"
   short_description: "Explicit Grafana MCP setup for local agents"
-  default_prompt: "Use $nebius-grafana-mcp-install to check setup for my selected agent, human profile and trusted Grafana origin."
+  default_prompt: "Use $nebius-grafana-mcp-install to install and verify Grafana MCP for this client; reuse my owned binding or ask for missing non-secret inputs."
 policy:
   allow_implicit_invocation: false

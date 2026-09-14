@@ -6,7 +6,7 @@
   "expected_behavior": [
     "Use helpers and references contained in this entire skill folder.",
     "Require the explicit human profile and trusted Grafana origin.",
-    "Explain prerequisites and human-run setup without another repository, companion skill or maintainer activation switch.",
+    "Check existing prerequisites and run bundled setup without another repository, companion skill or manual terminal handoff.",
     "Use fixed read-only flags including disable-proxied; Tempo uses finite GET routes."
   ]
 }

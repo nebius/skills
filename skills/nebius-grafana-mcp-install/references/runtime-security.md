@@ -2,7 +2,7 @@
 
 ## What the human authorizes
 
-Human-run setup installs one local MCP registration and trusts the explicit
+Explicit installation invocation authorizes the agent to run bundled setup, which installs one local MCP registration and trusts the explicit
 HTTPS Grafana origin to receive the selected human profile's Nebius IAM token.
 The operator must establish this audience before setup. No endpoint is embedded
 or declared universally available to Nebius customers.
@@ -34,6 +34,10 @@ Prometheus, Loki and Tempo query/metadata routes. UIDs are validated against the
 bound Grafana. A bounded constant query establishes custom Prometheus route
 compatibility; a plugin's name alone is insufficient. POST is limited to the
 Prometheus query, query_range and labels routes with bounded form bodies.
+The exact GET `/api/datasources/uid/<uid>/health` route is also supported after
+UID verification, without a body or query string. The plugin owns its health
+status; unsupported handlers retain their HTTP failure status with sanitized
+bodies. Setup never uses bulk datasource health as an installation gate.
 Other POSTs, PUT/PATCH/DELETE, streaming, MCP discovery, upgrades, arbitrary plugin
 paths, encoded separators and path traversal are refused. Generic Loki query
 reads also enforce the 20-result limit.
@@ -54,22 +58,25 @@ The same OS user can inspect process environments or private files. This design
 protects supported workflow output and credential routing, not against a hostile
 agent with unrestricted access to the user's operating-system account.
 
-## Repository discrepancies remain explicit
+## Repository policy and agent output
 
-The repository shared preamble and SECURITY.md forbid agent execution of token
-issuance and token persistence. The human executes this installer, and the agent
-is instructed to perform only credential-free checks and explain the handoff.
-However, stored tokens and recurring runtime issuance remain a policy deviation;
-a skill-local document does not override the repository's rules or establish a
-maintainer-approved exception. There is no permanent false approval switch.
+The shared preamble and SECURITY.md define a narrow exception for this bundled
+installer and its fixed supervised renewal. The agent can invoke setup after an
+explicit installation/update request, but cannot run credential commands
+directly, read private token files, reproduce the credential workflow or bypass
+native permissions. Protected persistence is limited to this runtime's state.
+No broad Python, Bash or credential prefix is added to allowed-tools.
 
-The root README describes skills as having no runtime beyond the Nebius CLI;
-this skill explicitly requires a Python/Bash proxy and Grafana MCP runtime.
-Its evaluations are inside the skill because the authorized contribution scope
-allows this folder, one root table row and a changelog entry; root CI does not run them.
-The contribution rule for a live CLI read under the testing profile is separate
-from hosted-Grafana compatibility evidence. These discrepancies must be considered
-when reviewing the contribution; they are not disabled-code release gates.
+Setup captures all CLI and readiness output internally. Progress and final JSON
+contain fixed stages, statuses, the validated server name and sanitized
+remediation messages. The Nebius token is never placed in agent-visible tool
+results, prompts, chat, logs or documentation by the supported workflow. This is a scoped privacy property,
+not an unconditional safety guarantee or an OS isolation boundary.
+
+The runtime requires Python/Bash and stock Grafana MCP. Root documentation
+states these extra prerequisites. Skill-local tests and behavior definitions
+remain outside root CI by scope decision. Source tests, isolated native-client
+checks, live Grafana access and current-chat activation are separate evidence.
 
 ## Sources
 
@@ -77,3 +84,4 @@ when reviewing the contribution; they are not disabled-code release gates.
 - [Grafana MCP API client](https://github.com/grafana/mcp-grafana/blob/v1.4.0/tools/api.go)
 - [Proxied discovery](https://github.com/grafana/mcp-grafana/blob/v1.4.0/proxied_tools.go)
 - [Prometheus backend](https://github.com/grafana/mcp-grafana/blob/v1.4.0/tools/prom_backend.go)
+- [Datasource health API](https://grafana.com/docs/grafana/latest/developer-resources/api-reference/http-api/api-legacy/data_source/#check-data-source-health)

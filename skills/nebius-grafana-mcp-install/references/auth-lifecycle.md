@@ -5,9 +5,9 @@
 Setup pins one explicit human Nebius CLI profile and its resolved user identity.
 Every token operation revalidates that identity. Ambient token/profile selectors
 are stripped in the child CLI environment; service-account substitution, static
-keys and impersonation are unsupported. The agent does not run setup or renewal.
+keys and impersonation are unsupported. The agent invokes only bundled setup; that helper and the fixed supervisor own credential operations.
 
-The human-run helper captures CLI stdout directly into a private temporary file,
+The bundled helper captures CLI stdout directly into a private temporary file,
 validates it and atomically replaces the token file. Errors use fixed messages;
 raw CLI output is withheld. The proxy reads one frozen generation. Stock MCP
 receives only an ephemeral credential for the local proxy.
@@ -38,9 +38,9 @@ sanitized statuses; they never cause credential or privilege substitution.
 ## Failure and recovery
 
 Startup and background renewal use noninteractive bounded authentication. If
-human authentication is required, complete it in your terminal using the selected
-profile. Re-run human setup with `--apply --update` to request renewal, then
-reconnect. Identical returned bytes still retain their original observation.
+human authentication is required, invoke the skill for authentication recovery.
+The agent runs bundled setup with `--apply --update`; complete browser sign-in
+if it opens, then reconnect when required. Identical returned bytes still retain their original observation.
 Do not paste tokens into
 chat, edit identity bindings, weaken file permissions or change the bound URL.
 
@@ -50,8 +50,8 @@ The writer captures its PID and process-start identity before lock acquisition,
 without creating a PID temporary file. Concurrent reuse requires a complete
 token/metadata pair with matching digest and a fresh observation. An incomplete
 pair is left unchanged and returns a normal refresh failure: background renewal
-uses the existing bounded retries, while foreground setup reports failure with
-human guidance. Recovery never invents metadata or relabels a token as newer.
+uses the existing bounded retries, while foreground setup reports a sanitized failure with
+recovery guidance. Recovery never invents metadata or relabels a token as newer.
 
 A failed or stopped deadline/renewal worker stops the MCP connection. Shutdown
 removes only owned temporary files and terminates the proxy and MCP processes.

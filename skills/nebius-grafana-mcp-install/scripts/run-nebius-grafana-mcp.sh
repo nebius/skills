@@ -34,7 +34,7 @@ usage() {
   cat <<'USAGE'
 Run Grafana MCP for Nebius-managed Grafana with a pinned human Nebius profile.
 
-The profile and identity binding must be created by the human-run setup helper.
+The profile and identity binding must be created by the bundled setup helper.
 Every token mint revalidates that the pinned profile still resolves to the
 expected human user. Ambient agent credentials and competing Grafana
 credentials are ignored.
@@ -49,7 +49,7 @@ Required environment:
   GRAFANA_TOKEN_FILE
       Private profile-scoped token file in the same mode-0700 state directory.
   GRAFANA_URL
-      Must equal the origin.json binding created by human-run setup.
+      Must equal the origin.json binding created by bundled setup.
   NEBIUS_GRAFANA_MCP_BINARY
       Verified physical path of the official Grafana MCP executable.
   NEBIUS_GRAFANA_BINARY_RECEIPT
@@ -65,7 +65,7 @@ Optional environment:
       Maximum wait for another live refresh during MCP startup or background
       renewal. Defaults to 90 seconds; allowed range is 1-120.
   NEBIUS_GRAFANA_STARTUP_LOCK_WAIT_SECONDS
-      Maximum wait for another live refresh during human-run setup
+      Maximum wait for another live refresh during bundled setup
       (--refresh-token-only). Defaults to 210 seconds; allowed range is 1-240.
 Usage:
   run-nebius-grafana-mcp.sh [canonical mcp-grafana args]
@@ -1044,7 +1044,7 @@ build_mcp_args "$@"
 if ! token_file_is_fresh; then
   printf 'warning: cached pinned-human token is missing or older than one hour; renewing it before MCP startup\n' >&2
   refresh_token noninteractive \
-    || die "human authentication is required; rerun setup in a terminal"
+    || die "human authentication is required; invoke nebius-grafana-mcp-install again and complete browser sign-in if needed"
   token_file_is_fresh \
     || die "renewed pinned-human token failed the startup freshness check"
 fi

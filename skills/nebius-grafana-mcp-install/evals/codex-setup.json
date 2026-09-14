@@ -5,8 +5,11 @@
   "query": "Set up Grafana MCP for Codex using testing-human at https://grafana.example.com/.",
   "expected_behavior": [
     "Select the explicit client, human profile and trusted HTTPS origin.",
-    "Run only credential-free check from the agent; present the exact apply command for the human terminal.",
-    "Explain the private proxy and unchanged repository credential-policy deviation.",
-    "Distinguish installing this skill, local setup and live readiness."
+    "Run credential-free check, then execute bundled apply; use update when owned repair requires it.",
+    "Explain private helper-owned credential handling under the narrow shared-policy exception; never expose tokens or bypass native permissions.",
+    "Distinguish installing this skill, local setup and live readiness.",
+    "Ask once for missing non-secret selectors and reuse only a unique validated owned binding.",
+    "Separate registration, helper runtime verification and observed current-chat activation; request reload only when the host requires it.",
+    "Do not use datasource health as the installation readiness gate."
   ]
 }
