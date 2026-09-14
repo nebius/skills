@@ -10,6 +10,8 @@
     "Distinguish installing this skill, local setup and live readiness.",
     "Ask once for missing non-secret selectors and reuse only a unique validated owned binding.",
     "Separate registration, helper runtime verification and observed current-chat activation; request reload only when the host requires it.",
-    "Do not use datasource health as the installation readiness gate."
+    "Do not use datasource health as the installation readiness gate.",
+    "Treat immediate local tool discovery separately from authenticated readiness; pending calls return a fixed retryable response.",
+    "Repair a missing owned executable via normal check and apply update; refuse changed bytes or provenance and do not adopt Homebrew installations."
   ]
 }

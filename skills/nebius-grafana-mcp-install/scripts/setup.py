@@ -124,13 +124,6 @@ def save_receipt(layout, desired, phase, previous=None):
         atomic_write(layout.receipt, new, layout.home, expected=old)
 
 
-def partial_entry(agent, desired):
-    value = dict(desired)
-    if agent == "codex":
-        value.pop("startup_timeout_sec", None)
-    return value
-
-
 class MissingInputs(SetupError):
     def __init__(self, fields, *, ambiguous=False):
         super().__init__("Select one installation using non-secret inputs." if ambiguous else
@@ -182,7 +175,7 @@ def resolve_layout(home, agent, profile=None, grafana_url=None, server=None, *, 
                 existing = client.entry(document)
                 if existing is None and receipt["phase"] == "ready":
                     raise SetupError("Owned binding is absent from the selected client configuration; provide explicit selectors to repair it.")
-                if existing not in (None, entry, receipt.get("previous"), partial_entry(agent, entry)):
+                if existing not in (None, entry, receipt.get("previous")):
                     raise SetupError("Owned registration changed; provide explicit selectors for inspection.")
                 runtime_env = entry.get("env", {})
                 if not isinstance(runtime_env, dict):
@@ -193,7 +186,7 @@ def resolve_layout(home, agent, profile=None, grafana_url=None, server=None, *, 
                 wrapper = Path(entry.get("command", ""))
                 if entry != client.desired(wrapper, runtime_env) or wrapper.name != "run-nebius-grafana-mcp.sh":
                     raise SetupError("Owned registration has an invalid runtime command.")
-                runtime_check.validate(home, wrapper.parent, runtime_env)
+                runtime_check.validate(home, wrapper.parent, runtime_env, allow_missing_binary=True)
                 identity_text = read_bytes(state / "identity", private=True, limit=1024).decode()
                 if not re.fullmatch(r"version=1\nprofile=" + re.escape(layout.profile)
                                     + r"\nuser_id=[A-Za-z0-9][A-Za-z0-9_.:-]{0,255}\n", identity_text):
@@ -222,7 +215,6 @@ def apply(layout, source, *, update=False, run=command, env=None, binary_provide
         raise SetupError("Ambient Grafana origin conflicts with the explicit setup destination.")
     client = Client(layout.agent, layout.server, layout.home, run=run, env=env, cwd=workdir or Path.cwd())
     before_raw, before_doc = client.snapshot()
-    settings_before = client.settings_snapshot()
     client.reject_shadowing(before_doc)
     existing = client.entry(before_doc)
     receipt = owned_receipt(layout)
@@ -230,7 +222,7 @@ def apply(layout, source, *, update=False, run=command, env=None, binary_provide
         binding(layout.state, layout.home, layout.grafana_url)
     if existing is not None and receipt is None:
         raise SetupError("This name belongs to an existing installation; choose a different server name.")
-    if receipt and existing not in (None, receipt["entry"], receipt.get("previous"), partial_entry(layout.agent, receipt["entry"])):
+    if receipt and existing not in (None, receipt["entry"], receipt.get("previous")):
         raise SetupError("Existing registration changed outside this installer; nothing adopted.")
     progress("checking prerequisites")
     preflight(layout, run, env)
@@ -244,8 +236,6 @@ def apply(layout, source, *, update=False, run=command, env=None, binary_provide
             current_raw, current_doc = client.snapshot()
             if current_raw != before_raw:
                 raise SetupError("Client configuration changed while waiting for setup.")
-            if client.settings_snapshot()[0] != settings_before[0]:
-                raise SetupError("Claude user settings changed while waiting for setup.")
             progress("preparing verified runtime")
             bundle = materialize(source, layout.root / "runtime", layout.home)
             with lock(layout.root / ".binary.lock", layout.home, timeout=210):
@@ -265,15 +255,12 @@ def apply(layout, source, *, update=False, run=command, env=None, binary_provide
                     env=runtime_env, cwd=layout.home, timeout=240)
                 token_state.inspect(layout.state / "iam-token")
             progress("configuring selected client")
-            # Compare both files again after potentially long browser authentication.
+            # Compare native registration again after potentially long browser authentication.
             if client.snapshot()[0] != current_raw:
                 raise SetupError("Client configuration changed during authentication; concurrent edits retained.")
-            client.configure_settings(settings_before)
             old_entry = client.entry(current_doc)
             if old_entry == desired:
                 pass
-            elif receipt and old_entry == partial_entry(layout.agent, desired):
-                client.set_timeout(desired, current_raw, current_doc)
             else:
                 save_receipt(layout, desired, "prepared", previous=old_entry)
                 if old_entry is not None:
@@ -293,7 +280,7 @@ def apply(layout, source, *, update=False, run=command, env=None, binary_provide
             except readiness.ReadinessError as exc:
                 result.update(runtime="failed", message=str(exc))
             # Attest registration again after the independent runtime trial.
-            if client.entry(client.snapshot()[1]) != desired or not client.settings_ready(client.settings_snapshot()[1]):
+            if client.entry(client.snapshot()[1]) != desired:
                 raise SetupError("Client settings changed during verification; registration needs another check.")
             return result
 
@@ -302,14 +289,13 @@ def check(layout, source, *, run=command, env=None, workdir=None):
     env = dict(env if env is not None else clean_env(layout.agent))
     client = Client(layout.agent, layout.server, layout.home, run=run, env=env, cwd=workdir or Path.cwd())
     _, document = client.snapshot()
-    _, settings = client.settings_snapshot()
     client.reject_shadowing(document)
     receipt = owned_receipt(layout)
     entry = client.entry(document)
     if entry and receipt is None:
         raise SetupError("Existing registration is not owned by this installer.")
     # Structural inspection never reads token contents, mints tokens or starts MCP.
-    ready = bool(receipt and receipt["phase"] == "ready" and entry == receipt["entry"] and client.settings_ready(settings))
+    ready = bool(receipt and receipt["phase"] == "ready" and entry == receipt["entry"])
     for filename in ("origin.json", "identity", "iam-token", "iam-token.json"):
         path = layout.state / filename
         check_path(path, layout.home, private=True, missing=True)
@@ -321,6 +307,7 @@ def check(layout, source, *, run=command, env=None, workdir=None):
         if ready:
             verify_bundle(expected_bundle, layout.home)
             client.verify_native(entry)
+            ready = runtime_check.validate(layout.home, expected_bundle, entry["env"], allow_missing_binary=True)
     emit({"registration": "locally matches" if ready else "setup or repair needed",
           "runtime": "not started; live readiness not verified", "update_required": bool(receipt and not ready),
           "server": layout.server})

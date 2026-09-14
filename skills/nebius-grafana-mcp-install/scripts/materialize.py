@@ -3,7 +3,6 @@
 import io
 import os
 from pathlib import Path
-import platform
 import shutil
 import tarfile
 import tempfile
@@ -14,7 +13,7 @@ from runtime_contract import FILES
 from common import (SetupError, atomic_write, check_path, digest, json_bytes,
                     json_read, lock, mkdir_private, read_bytes)
 
-VERSION = "1.4.0"
+from binary_state import VERSION, artifact, inspect as inspect_binary
 
 
 def source_files(source):
@@ -69,34 +68,6 @@ def materialize(source, root, home):
                 shutil.rmtree(stage)
 
 
-def binary_hash(path):
-    # Resolve package-manager symlinks, then check the complete physical ancestry.
-    path = path.resolve(strict=True)
-    for directory in path.parents:
-        info = directory.stat()
-        if info.st_uid not in (0, os.getuid()) or info.st_mode & 0o022:
-            if directory in (Path("/tmp"), Path("/private/tmp")) and info.st_mode & 0o1000:
-                continue
-            raise SetupError("Binary has an unsafe ancestor.")
-    return digest(read_bytes(path, system=True, limit=256 * 1024 * 1024))
-
-
-def homebrew_binary(candidate):
-    """Package metadata identifies bottles whose --version reports '(devel)'."""
-    path = candidate.resolve(strict=True)
-    if path.parts[-4:] != ("mcp-grafana", VERSION, "bin", "mcp-grafana"):
-        return None
-    cellar = path.parent.parent
-    receipt = json_read(cellar / "INSTALL_RECEIPT.json", system=True)
-    source = receipt.get("source", {})
-    if source.get("tap") != "homebrew/core" or source.get("versions", {}).get("stable") != VERSION:
-        return None
-    formula = read_bytes(cellar / ".brew/mcp-grafana.rb", system=True)
-    if f'https://github.com/grafana/mcp-grafana/archive/refs/tags/v{VERSION}.tar.gz'.encode() not in formula:
-        return None
-    return {"path": str(path), "sha256": binary_hash(path), "version": VERSION, "source": "homebrew/core"}
-
-
 def fetch(url):
     with urllib.request.urlopen(url, timeout=30) as response:
         data = response.read(128 * 1024 * 1024 + 1)
@@ -105,49 +76,41 @@ def fetch(url):
     return data
 
 
-def acquire_binary(source, base, home, *, download=fetch, candidate=None, system=None):
-    system = system or f"{platform.system()}-{platform.machine()}"
-    system = system.replace("aarch64", "arm64")
-    catalog = json_read(source / "artifacts.json")
-    archive = catalog["archives"].get(system)
-    if not archive or catalog["version"] != VERSION:
-        raise SetupError("Supported platforms are macOS/Linux on arm64 or x86_64.")
+def acquire_binary(source, base, home, *, download=fetch, system=None):
+    archive, url = artifact(source, system)
+    check_path(base, home, directory=True, private=True, missing=True)
     receipt_path = base / "binary.json"
-    if receipt_path.exists() or receipt_path.is_symlink():
-        receipt = json_read(receipt_path, private=True)
-        if receipt.get("version") != VERSION or receipt.get("sha256") != binary_hash(Path(receipt["path"])):
-            raise SetupError("Managed binary provenance changed; refusing reuse.")
-        return receipt
-    candidate = candidate or shutil.which("mcp-grafana")
+    previous = None
     receipt = None
-    if candidate:
-        try:
-            receipt = homebrew_binary(Path(candidate))
-        except (SetupError, OSError, KeyError, TypeError, AttributeError):
-            receipt = None
+    if receipt_path.exists() or receipt_path.is_symlink():
+        receipt, present = inspect_binary(source, base, home, system=system)
+        if present:
+            return receipt
+        previous = read_bytes(receipt_path, private=True)
     mkdir_private(base, home)
-    if receipt is None:
-        url = f"https://github.com/grafana/mcp-grafana/releases/download/v{VERSION}/{archive['name']}"
-        data = download(url)
-        if digest(data) != archive["sha256"]:
-            raise SetupError("Official release checksum mismatch; binary not installed.")
-        with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
-            members = [member for member in tar.getmembers() if member.name == "mcp-grafana"]
-            if len(members) != 1 or not members[0].isfile() or members[0].size > 256 * 1024 * 1024:
-                raise SetupError("Release archive does not contain one regular MCP executable.")
-            stream = tar.extractfile(members[0])
-            if stream is None:
-                raise SetupError("Release executable is missing.")
-            executable = stream.read()
-        target = base / "mcp-grafana"
-        if target.exists() or target.is_symlink():
-            # Recover a crash after binary publication but before its receipt.
-            # Never adopt or overwrite an unknown executable.
-            check_path(target, home, directory=False)
-            if target.stat().st_mode & 0o777 != 0o700 or read_bytes(target, limit=256 * 1024 * 1024) != executable:
-                raise SetupError("Unrecorded binary differs from the verified release.")
-        else:
-            atomic_write(target, executable, home, mode=0o700)
-        receipt = {"path": str(target), "sha256": digest(executable), "version": VERSION, "source": url}
-    atomic_write(receipt_path, json_bytes(receipt), home)
+    data = download(url)
+    if digest(data) != archive["sha256"]:
+        raise SetupError("Official release checksum mismatch; binary not installed.")
+    with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
+        members = [member for member in tar.getmembers() if member.name == "mcp-grafana"]
+        if len(members) != 1 or not members[0].isfile() or members[0].size > 256 * 1024 * 1024:
+            raise SetupError("Release archive does not contain one regular MCP executable.")
+        stream = tar.extractfile(members[0])
+        if stream is None:
+            raise SetupError("Release executable is missing.")
+        executable = stream.read()
+    if receipt and digest(executable) != receipt["sha256"]:
+        raise SetupError("Reacquired binary differs from its owned provenance.")
+    target = base / "mcp-grafana"
+    if target.exists() or target.is_symlink():
+        # Recover only an exact publication interrupted before the receipt.
+        check_path(target, home)
+        if target.stat().st_mode & 0o777 != 0o700 or read_bytes(target, limit=256 * 1024 * 1024) != executable:
+            raise SetupError("Unrecorded binary differs from the verified release.")
+    else:
+        atomic_write(target, executable, home, mode=0o700)
+    receipt = {"path": str(target), "sha256": digest(executable), "version": VERSION,
+               "source": url, "archive_sha256": archive["sha256"]}
+    if previous != json_bytes(receipt):
+        atomic_write(receipt_path, json_bytes(receipt), home, expected=previous)
     return receipt

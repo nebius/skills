@@ -54,8 +54,9 @@ setup commands or local state changes.
 - Codex CLI or Claude Code's standard user configuration. Custom Claude config
   directories are refused; existing Codex home settings are honored inside the
   user's home.
-- Official Grafana MCP 1.4.0, reused only with verified Homebrew provenance or
-  installed from the locked official archive. No global package upgrades.
+- Official Grafana MCP 1.4.0, installed from the checksum-pinned official archive
+  into an owned version directory. Existing validated bytes are reused offline;
+  a missing executable is repaired by invoking the skill again.
 - A human-supplied HTTPS Grafana origin, bound privately to the installation and reused on later invocations.
   Origin and identity changes require a distinct installation name.
 
@@ -69,18 +70,24 @@ See [client setup](references/client-setup.md),
 [runtime security](references/runtime-security.md) for paths, recovery and limits.
 Ordinary queries are a separate task after setup succeeds.
 
-Renewal avoids PID temporary files and rejects incomplete concurrent token
-generations. Background failures retain bounded retries. When updating a pre-fix
-runtime, stop writers sharing its state and follow the authentication recovery
-instructions for any existing lock residue; it is not automatically deleted.
+The runtime answers initialization and pinned tool/resource discovery locally,
+without waiting for authentication or Grafana metadata. Calls made during
+preparation return a fixed retryable error; no operation is queued or forwarded.
+The real authenticated backend must match the pinned catalog before it accepts
+operations. Preparation is bounded to 240 seconds and never opens a browser.
 
-Setup configures Codex's per-server 300-second startup timeout and Claude's user
-`env.MCP_TIMEOUT` to at least 300000 milliseconds, preserving a larger valid
-value and unrelated settings. It verifies initialization, tool discovery and one
-bounded datasource list in a private subprocess. Registration, this runtime
-check and current-chat tool availability are reported separately. Datasource
-health results, including unsupported plugin checks, do not determine whether
-installation succeeded.
+The one-hour freshness limit applies when loading a credential. Crossing that
+boundary after loading does not end the connection; its watchdog retains the
+eleven-hour operational cap measured from the token's original observation.
+This cap does not establish the token's actual expiry.
+
+Setup uses native client registration and does not rewrite client timeout
+settings. Native commands retain their own concurrency behavior; detected
+registration drift is reported. Setup verifies one bounded datasource list in
+a private subprocess, retrying only the explicit preparation response within
+its 300-second budget. Registration, runtime readiness and current-chat tool
+availability are reported separately. Datasource health, including unsupported
+plugin checks, does not determine installation success.
 
 ## Validation
 

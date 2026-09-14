@@ -8,6 +8,7 @@ import subprocess
 import time
 
 from common import SetupError, unique_object
+from mcp_frontend import PREPARING
 
 MAX_FRAME = 8 * 1024 * 1024
 PROTOCOL = "2025-03-26"
@@ -65,7 +66,7 @@ class Conversation:
             raise ValueError
         return value
 
-    def request(self, method, params):
+    def request_once(self, method, params):
         self.identifier += 1
         self.send({"jsonrpc": "2.0", "id": self.identifier, "method": method, "params": params})
         for _ in range(128):
@@ -74,6 +75,12 @@ class Conversation:
                 continue
             if type(value.get("id")) is not int or value["id"] != self.identifier or "method" in value:
                 raise ValueError
+            if value.get("error") == PREPARING:
+                remaining = self.deadline - time.monotonic()
+                if remaining <= 0:
+                    raise ReadinessError("Runtime verification timed out while preparing authentication.")
+                time.sleep(min(0.1, remaining))
+                return None
             if "error" in value:
                 raise ReadinessError("Runtime verification returned an error; sensitive details withheld.")
             result = value.get("result")
@@ -81,6 +88,12 @@ class Conversation:
                 raise ValueError
             return result
         raise ReadinessError("Runtime verification exceeded its notification limit; output withheld.")
+
+    def request(self, method, params):
+        while True:
+            result = self.request_once(method, params)
+            if result is not None:
+                return result
 
     def verify(self):
         result = self.request("initialize", {"protocolVersion": PROTOCOL, "capabilities": {},

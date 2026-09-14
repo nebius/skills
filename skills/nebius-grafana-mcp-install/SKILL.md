@@ -128,7 +128,7 @@ running as the same OS user. Read [runtime security](references/runtime-security
    profiles, unrelated client config, old donor installations or project IDs.
 2. Check-only intent ends after reporting the helper's local result. For install
    or update intent, explain briefly that setup installs a verified runtime,
-   prepares private credentials, updates this client's user settings and checks
+   prepares private credentials, registers MCP through the native client and checks
    connectivity. Then **run** the helper with `--apply`; the explicit invocation
    already authorizes this workflow. Supply missing selectors as arguments:
 

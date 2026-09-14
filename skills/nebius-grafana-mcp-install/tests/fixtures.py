@@ -74,8 +74,14 @@ for line in sys.stdin:
     if 'id' not in request:
         continue
     if request.get('method') == 'initialize':
-        result = {'protocolVersion': '2025-03-26', 'capabilities': {'tools': {}},
-                  'serverInfo': {'name': 'fixture', 'version': '1'}}
+        result = {'protocolVersion': '2025-03-26', 'capabilities': {'tools': {'listChanged': True}, 'resources': {}},
+                  'serverInfo': {'name': 'fixture', 'version': '1.4.0'}}
+    elif request.get('method') == 'ping':
+        result = {}
+    elif request.get('method') == 'resources/list':
+        result = {'resources': []}
+    elif request.get('method') == 'resources/templates/list':
+        result = {'resourceTemplates': []}
     elif request.get('method') == 'tools/list':
         result = {'tools': [{'name': 'list_datasources', 'inputSchema': {'type': 'object'}}]}
     else:
@@ -136,6 +142,13 @@ class FakeSystem:
         (self.bin / "nebius").chmod(0o700)
         self.source = self.root / "source"
         shutil.copytree(SCRIPTS, self.source, ignore=shutil.ignore_patterns("__pycache__"))
+        catalog = json.loads((self.source / "catalog.json").read_bytes())
+        catalog.update(initialize={"protocolVersion": "2025-03-26",
+                                  "capabilities": {"tools": {"listChanged": True}, "resources": {}},
+                                  "serverInfo": {"name": "fixture", "version": "1.4.0"}},
+                       tools=[{"name": "list_datasources", "inputSchema": {"type": "object"}}],
+                       resources=[], resourceTemplates=[])
+        (self.source / "catalog.json").write_bytes(json_bytes(catalog))
         self.env = {
             "PATH": str(self.bin) + os.pathsep + str(Path(sys.executable).parent) + os.pathsep + os.defpath,
             # The spawned fixture process represents a synthetic user; the
@@ -176,10 +189,14 @@ class FakeSystem:
     def binary(self, source, base, home):
         mkdir_private(base, home)
         executable = base / "mcp-grafana"
-        receipt = {"path": str(executable), "sha256": digest(MCP.encode()), "version": "1.4.0", "source": "synthetic-fixture"}
+        from binary_state import artifact
+        archive, url = artifact(source)
+        receipt = {"path": str(executable), "sha256": digest(MCP.encode()), "version": "1.4.0",
+                   "source": url, "archive_sha256": archive["sha256"]}
         if not executable.exists():
             atomic_write(executable, MCP.encode(), home, mode=0o700)
-            atomic_write(base / "binary.json", json_bytes(receipt), home)
+            if not (base / "binary.json").exists():
+                atomic_write(base / "binary.json", json_bytes(receipt), home)
         return receipt
 
     def run(self, args, *, env=None, cwd=None, timeout=30):

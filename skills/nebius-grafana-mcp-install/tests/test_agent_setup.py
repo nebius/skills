@@ -12,7 +12,6 @@ import unittest
 from unittest import mock
 
 from fixtures import FakeSystem, MCP, ORIGIN, SCRIPTS
-from client_config import Client
 from common import SetupError, json_bytes
 import readiness
 import setup
@@ -117,7 +116,8 @@ class AgentSetupTests(unittest.TestCase):
                 self.assertEqual(self.fake.result, {"registration": "ready", "runtime": "ready", "activation": "not checked"})
                 messages = [json.loads(line) for line in protocol_log.read_text().splitlines()]
                 self.assertEqual([x["method"] for x in messages],
-                                 ["initialize", "notifications/initialized", "tools/list", "tools/call"])
+                                 ["initialize", "notifications/initialized", "tools/list",
+                                  "resources/list", "resources/templates/list", "tools/call"])
                 self.assertEqual(messages[-1]["params"], {"name": "list_datasources", "arguments": {"limit": 1}})
                 self.assertFalse(list(layout.state.glob("iam-token.generation.*")))
         events = [json.loads(line) for line in (self.fake.root / "mcp.jsonl").read_text().splitlines()]
@@ -153,7 +153,6 @@ class ClaudeSettingsTests(unittest.TestCase):
     def setUp(self):
         self.fake = FakeSystem()
         self.addCleanup(self.fake.close)
-        self.client = Client("claude", "grafana-nebius", self.fake.home)
         self.path = self.fake.home / ".claude/settings.json"
 
     def write(self, value):
@@ -161,47 +160,43 @@ class ClaudeSettingsTests(unittest.TestCase):
         self.path.write_bytes(json_bytes(value))
         self.path.chmod(0o600)
 
-    def test_create_raise_preserve_larger_and_unrelated_settings(self):
-        self.client.configure_settings(self.client.settings_snapshot())
-        self.assertEqual(json.loads(self.path.read_bytes()), {"env": {"MCP_TIMEOUT": "300000"}})
-        for timeout in ("10", "300000", "600000"):
-            original = {"env": {"MCP_TIMEOUT": timeout, "UNCHANGED": "value"},
-                        "permissions": {"deny": ["Bash(secret:*)"]}, "hooks": {"Stop": []}}
-            self.write(original)
-            before = self.path.read_bytes()
-            self.client.configure_settings(self.client.settings_snapshot())
-            if int(timeout) >= 300000:
-                self.assertEqual(self.path.read_bytes(), before)
-            else:
-                original["env"]["MCP_TIMEOUT"] = "300000"
-                self.assertEqual(json.loads(self.path.read_bytes()), original)
+    def test_setup_does_not_create_settings_or_timeout(self):
+        self.fake.apply(self.fake.layout("claude"))
+        self.assertFalse(self.path.exists())
+        self.fake.apply(self.fake.layout("codex"))
+        entry = self.fake.read_config("codex")["mcp_servers"]["grafana-nebius"]
+        self.assertNotIn("startup_timeout_sec", entry)
 
-    def test_malformed_settings_refuse_before_authentication(self):
-        for document in ([], {"env": []}, {"env": {"MCP_TIMEOUT": None}},
-                         {"env": {"MCP_TIMEOUT": 300000}}, {"env": {"MCP_TIMEOUT": "-1"}}):
-            self.write(document)
-            self.fake.calls.clear()
-            with self.assertRaises(SetupError):
-                self.fake.apply(self.fake.layout("claude"))
-            self.assertEqual(self.fake.calls, [])
-        self.path.write_bytes(b'{"env":{},"env":{}}')
-        with self.assertRaises(SetupError):
-            self.client.settings_snapshot()
+    def test_existing_settings_are_byte_preserved(self):
+        self.write({"env": {"MCP_TIMEOUT": "10", "UNCHANGED": "value"},
+                    "permissions": {"deny": ["Bash(secret:*)"]}, "hooks": {"Stop": []}})
+        before = self.path.read_bytes()
+        self.fake.apply(self.fake.layout("claude"))
+        self.assertEqual(self.path.read_bytes(), before)
 
-    def test_concurrent_settings_are_preserved(self):
-        before = self.client.settings_snapshot()
-        self.write({"env": {"KEEP": "concurrent"}})
-        with self.assertRaisesRegex(SetupError, "changed"):
-            self.client.configure_settings(before)
+    def test_concurrent_settings_writer_is_never_overwritten(self):
+        self.write({"env": {"KEEP": "before"}})
+        run = self.fake.run
+
+        def concurrent_writer(args, **kwargs):
+            result = run(args, **kwargs)
+            if args[:3] == ["claude", "mcp", "add"]:
+                self.write({"env": {"KEEP": "concurrent"}})
+            return result
+
+        setup.apply(self.fake.layout("claude"), self.fake.source, run=concurrent_writer,
+                    env=self.fake.env, binary_provider=self.fake.binary, verifier=lambda *args, **kwargs: None)
         self.assertEqual(json.loads(self.path.read_bytes()), {"env": {"KEEP": "concurrent"}})
 
-    def test_settings_symlink_refused(self):
-        self.write({})
+    def test_settings_symlink_is_not_touched(self):
+        self.write({"env": {"KEEP": "value"}})
         other = self.fake.home / "other.json"
         self.path.rename(other)
         self.path.symlink_to(other)
-        with self.assertRaises(SetupError):
-            self.client.settings_snapshot()
+        before = other.read_bytes()
+        self.fake.apply(self.fake.layout("claude"))
+        self.assertTrue(self.path.is_symlink())
+        self.assertEqual(other.read_bytes(), before)
 
 
 class ReadinessTests(unittest.TestCase):

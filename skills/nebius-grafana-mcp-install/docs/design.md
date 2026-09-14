@@ -2,7 +2,7 @@
 <!-- maintain-project-specs:design:start schema=maintain-project-specs/design-v2 -->
 # Project Design
 
-<!-- FEATURE: FEAT-001 reqs=REQ-001 status=ready delivery=verified priority=P0 version=12 -->
+<!-- FEATURE: FEAT-001 reqs=REQ-001 status=ready delivery=verified priority=P0 version=14 -->
 ### FEAT-001: Agent-run setup and supervised credential proxy
 
 #### Requirements Covered
@@ -15,27 +15,25 @@ The installer supports agent-run setup and exact datasource health reads. Its he
 
 #### Design Details
 
-Keep the Python 3.11+ standard library, Bash supervisor, pinned MCP 1.4.0 and native Codex/Claude clients. No model, framework or new autonomous agent is added. The existing host agent gathers non-secret selectors, invokes the fixed helper and reports sanitized outcomes; all credential and installation logic is deterministic code.
+Keep Python 3.11+ standard library, Bash supervision, pinned MCP 1.4.0, stdio and native Codex/Claude registration. All installation, credential and protocol handling is deterministic code. The existing host agent collects non-secret selectors and invokes the bundled helper. There is no new model, framework or persistent daemon.
 
-Retain --agent codex|claude, --check (default), --apply, --update and --mcp-server-name. Allow missing profile/origin/server selectors only when a unique validated installer-owned binding supplies them. Never infer a trusted destination from ambient profiles or another installer's config. Explicit conflicting selectors fail before authentication. Check reads no tokens, changes no files and starts no runtime. Agent invocation runs apply and selects update only when owned state requires it.
+Remove direct Codex timeout insertion, Claude settings writes and timeout-specific partial repair. Preserve the existing public setup flags and owned registration receipts. Native client commands own configuration writes; detect drift before and after those commands without claiming atomic preservation against all external writers. Check is credential-free and never creates state or starts a runtime.
 
-Setup checks prerequisites, validates ownership, materializes immutable code, acquires the checksum-verified executable, validates the pinned human identity, acquires credentials internally and registers the chosen client. The helper opens the official browser when authentication is needed; raw CLI output and login URLs stay internal. Bounded progress and structured final results expose only fixed statuses and safe remediation messages. The agent never reads token files, runs token commands itself or weakens native permissions.
+Bundle discovery metadata generated from the checksum-verified official executable and exact immutable MCP arguments. The bridge owns client-side initialize, initialized, ping and discovery. It advertises pinned tools and resources without waiting on authentication. Integrity-bind the catalog into the runtime manifest. After credential preparation, launch the live stock MCP, initialize it privately and compare tools/resources with the pinned catalog before forwarding operations. Real Grafana frontend metadata is fetched by this live backend, never fabricated or replaced by a successful synthetic response.
 
-Configure Codex startup_timeout_sec=300. For Claude, atomically patch only user settings env.MCP_TIMEOUT to at least 300000 milliseconds, retaining a larger valid value and all unrelated values. Snapshot before authentication and recheck before every mutation; a concurrent edit is retained and reported. Record installation separately from readiness so a verification failure can leave recoverable owned configuration without a false success claim.
+The shell supervisor launches the local bridge before asynchronous credential preparation. Existing fresh tokens are frozen immediately; missing or stale tokens use bounded noninteractive refresh. Preparation, including backend readiness, has a 240-second deadline. Pending operations receive a fixed retryable error and never reach Grafana. Credential, worker or backend validation failure stops the owned connection. No background browser sign-in is permitted. Keep token bytes within helper/runtime processes and protected storage; install output guards before enabling the backend. Preserve generation binding, one-hour reuse, ten-hour renewal, eleven-hour operational caps and rotation exit 75. The one-hour limit applies to credential admission (inspection, freezing and backend loading). When attaching the watchdog, generation-observed instead requires 0 <= observation age < STOP_AGE, retaining schema/hash/private-file checks and the original observation. Keep watchdog timing, outputs, errors and all persistent formats unchanged. This repairs CR-GRAFANA-003 without extra refreshes or startup grace periods.
 
-After registration, a bounded helper subprocess launches the exact owned wrapper and performs initialize, initialized notification, tools/list and one list_datasources call. Validate responses internally, then stop and reap its owned process group. Never relay MCP payloads or stderr to the agent. The host agent separately verifies actual current-session availability when supported; otherwise request reload without killing the active client. Registration, independent runtime verification and host activation are separate evidence lanes.
+Acquire only the checksum-pinned official release into the private owned version directory. Reuse validated bytes offline. Separate structural ownership discovery from executable availability so a missing owned binary produces update_required and normal invocation can reacquire it. Never silently replace altered bytes, malformed provenance or unsafe paths. Publish the receipt last and retain interruption recovery only for exactly verified artifacts. No Homebrew or legacy path remains.
 
-Extend only exact `GET /api/datasources/uid/<uid>/health`, without body or query, and verify the UID through the bound Grafana first. Preserve same-origin TLS, redirect rejection, finite limits, private authentication and output guards. Do not invoke bulk datasource health during installation; an unhealthy or unsupported datasource is not an installation failure. Keep the advertised tool and fixed read-only MCP categories including --disable-proxied.
-
-Retain existing protected token files, immutable origin/identity binding, frozen connection generations, one-hour reuse, ten-hour renewal and eleven-hour operational caps. These are observation-based limits, not authoritative expiry. Rotation exits 75 and may require reconnecting. Preserve the existing directory-lock repair and explicit recovery boundary; do not invent token ages or delete unknown residue.
+Setup still prepares authentication before native registration and performs a bounded independent protocol conversation plus one datasource read. Retry only the explicit preparation-pending response within the existing 300-second verification budget. Registration, authenticated runtime readiness and current-client activation remain separate statuses. Keep exact datasource health forwarding, finite proxy limits, TLS/origin restrictions and token redaction unchanged.
 
 #### Selected Option
 
-Agent-run deterministic installer with a skill-specific credential boundary, exact health-route support and separate installation/runtime/activation results. Keep the generated catalog preamble unchanged and explain the helper's limited exception in this skill's own invocation instructions. Host and organization restrictions remain authoritative.
+Eliminate direct shared-settings writes through immediate local protocol discovery and asynchronous authenticated backend preparation. Own the official executable. This preserves one-invocation installation and avoids package-manager lifetime coupling.
 
 #### Alternatives Considered
 
-The manual terminal handoff does not meet the requested experience. Hiding datasource health avoids forwarding but removes useful functionality. Broad proxy route access and an unconditional safety claim are rejected. Replacing the existing stack or stdio transport is unnecessary.
+An installer-only lock cannot protect uncooperative writers. Native configuration APIs alone do not cover both clients' timeout settings. Continuing to reference Homebrew files retains the recovery defect. Serving fabricated Grafana metadata or weakening token freshness is rejected. A persistent daemon and legacy migration layers are unnecessary for this unreleased skill.
 
 #### Implementation Boundaries
 
@@ -43,39 +41,39 @@ Confine changes to this skill folder, its root README table row and one concise 
 
 #### Test-First Success Criteria
 
-- TDD-001: Reproduce health-route refusal before repair, then prove healthy/error/unsupported responses and all route restrictions.
-- TDD-002: Prove both-client automatic setup, owned selector resolution, missing/ambiguous input handling, timeout preservation, interrupted recovery and drift refusal with isolated fixtures.
-- TDD-003: Inject credentials/login URLs into subprocess failures and protocol responses; no agent-visible output may contain them. Bound malformed, oversized, missing or stalled MCP responses and reap descendants.
+- TDD-001: Prove client timeout/settings writes are absent, including concurrent external settings edits.
+- TDD-002: Block authentication behind a barrier and prove initialization/discovery remain within native startup defaults; pending calls perform no Grafana reads and become usable after valid preparation.
+- TDD-003: Prove owned binary offline reuse, missing-file recovery, checksum/path/provenance rejection and receipt-publication interruption recovery.
+- TDD-004: Preserve protocol privacy, catalog matching, cancellation, worker cleanup, generation freshness, renewal and operational deadlines.
+- TDD-005: Freeze synthetic credentials at observation plus 3599 seconds, then attach the watchdog at plus 3601 using a mocked clock. Preserve original observation/file bytes, reject new loading after one hour, and enforce the original eleven-hour cap including invalid metadata and permission cases.
 
 #### Validation Plan
 
-For runtime changes, run scoped Python/Bash checks and the full skill-local suite. For this documentation-only scope correction, verify exact equality of restored files to the PR base, only the allowed README/changelog additions, shared-preamble synchronization, local links/JSON, spec validation, repository structural validation, read-only risk review and align. Do not add CI jobs or claim source tests establish live activation.
+Run targeted tests first, then the full skill-local suite, Ruff, ShellCheck, Bash syntax, structural/spec checks and scoped align. Compare the complete PR diff with its base to enforce the root/shared boundary. CI expansion remains deferred.
 
 #### Test Plan
 
-Use fake Nebius/client/MCP executables, local HTTP fixtures and temporary homes. Verify actual protocol exchange, fixed MCP arguments, current config attestation, health forwarding and output privacy. Retain cancellation, rotation, concurrency and immutable-bundle regressions. Native-client verification uses disposable homes and synthetic auth only; real authentication is outside development scope.
+Use synthetic credentials, fake Nebius executables, temporary homes and local HTTP fixtures. Verify actual protocol flows and native client registration separately. Validate the pinned official MCP against the catalog with no cloud credentials; native client checks use disposable homes. Do not perform real authentication or modify installed clients.
 
 #### Evaluation Plan
 
-Update local scenarios for explicit invocation, non-secret questions, browser sign-in, automatic apply/update, protected output, client reload and unrelated-registration refusal. Model evals remain separate from deterministic tests; CI remains unchanged.
+Update local scenarios for invocation-driven installation, immediate discovery, pending/failed authentication, runtime readiness, default client timeouts and owned binary recovery. Model-run evaluation remains distinct from deterministic test evidence.
 
 #### Rollout And Rollback
 
-Return PR 8 to Draft, update the current branch and retain immutable runtime bundles. Repeated skill invocation reconciles only owned state. Do not automatically delete state, restore old credentials or terminate active clients. A readiness failure retains independently verified registration with a clear failure status.
+The skill is unreleased and has no existing users. Use one canonical implementation without migration or compatibility branches. Keep PR 8 Draft and do not commit or push as part of this implementation request. Retain immutable bundles and preserve actual user installations. Runtime verification failures remain explicit rather than reporting installation success.
 
 #### Done Definition
 
-The installer and skill-specific instructions pass focused verification and alignment. The complete diff outside the skill contains only its README table row and concise CHANGELOG entry. The final report distinguishes local/source proof from any unperformed live/browser/current-client activation checks.
+The shared-settings, binary-ownership and watchdog-boundary findings are resolved, focused verification and scoped alignment pass, and only the skill plus its permitted README/changelog rows differ from the PR base. Source, isolated native and live evidence are reported separately.
 
 #### Implementation Evidence
 
-Implemented agent-run bundled setup with owned selector reuse, sanitized progress/results, automatic Claude settings, private MCP readiness and exact datasource health forwarding. Tests cover input reuse, configuration drift, browser-mode authentication, protocol failures and process cleanup. Restored shared/root policy and other skills to the PR base, retained only the allowed catalog rows, and localized the installer instructions and evidence without changing runtime code. The skill explicitly documents its credential-workflow deviation from generic catalog rules and respects higher-priority restrictions.
+The v13 startup and binary-ownership changes remain intact. CR-GRAFANA-003 is implemented in token_state.py: generation-observed validates against STOP_AGE while inspection, freezing and backend loading retain MAX_STARTUP_AGE. Original metadata, watchdog timing, errors and output formats are unchanged. Five deterministic tests cover the boundary, admission restrictions, original deadline and malformed/private-file rejection. Skill-local lifecycle documentation and the existing concise changelog entry describe the distinction.
 
 #### Verification Evidence
 
-Revision verification: the full 92-test synthetic suite passed in 147.559 seconds, including strengthened paused-wrapper cleanup and malformed-binding regressions. Both actual native client CLIs passed registration, repeat apply, owned reuse, local check and synthetic runtime verification in temporary homes. Root validation, Ruff, ShellCheck, syntax/JSON and diff checks passed; Markdown has no introduced diagnostics relative to the baseline with documented style exclusions. Independent code/security review reproduced and verified repairs for origin selection and stopped-wrapper cleanup. The subsequent explicit alignment review found no additional code or security defects. Live authentication/Grafana access, Linux execution, live renewal, fresh model invocation and current-client activation are not claimed. See references/validation.md for evidence boundaries.
-
-Scope-correction verification: exact comparison with the PR base confirms that only one README table row and one concise CHANGELOG entry differ outside this skill. All eleven generated preambles synchronize with the unchanged source. Repository structural validation, spec validation, JSON parsing, local link checks, diff whitespace and scoped Markdown checks passed. Independent read-only review found no introduced serious defect; the documented difference from generic catalog credential rules remains. Runtime scripts and tests match the previously validated revision, so the runtime suite was not repeated for this documentation-only correction.
+On 2026-09-14, the new mocked-clock regression failed before the source fix and passed afterward. All five new tests passed independently, and the full skill suite passed 110 tests in 180.472 seconds. Ruff, ShellCheck, Bash syntax, Python AST, JSON, local links, Markdown, shared-preamble/frontmatter, spec and whitespace checks passed. Scoped code/security review found no additional defect. Changes from the prior working baseline are confined to the skill and its existing changelog entry; the complete PR diff retains only the permitted skill, README row and changelog entry, and PR 8 remains Draft. Earlier isolated native/distribution/catalog checks are historical evidence, not reruns for this fix. Live/platform and cross-catalog validator limitations remain documented in references/validation.md.
 
 <!-- /FEATURE: FEAT-001 -->
 <!-- maintain-project-specs:design:end -->

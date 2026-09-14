@@ -1,6 +1,8 @@
 """Internal runtime attestation. No credential contents are emitted."""
 
 import os
+
+from binary_state import inspect as inspect_binary
 from pathlib import Path
 import sys
 
@@ -9,7 +11,7 @@ from origin import binding
 from runtime_contract import FILES
 
 
-def validate(home, directory, env):
+def validate(home, directory, env, *, allow_missing_binary=False):
     agent = env["NEBIUS_GRAFANA_AGENT"]
     if agent not in {"codex", "claude"}:
         raise SetupError("Invalid runtime client binding.")
@@ -41,21 +43,12 @@ def validate(home, directory, env):
     binary_receipt_path = Path(env["NEBIUS_GRAFANA_BINARY_RECEIPT"])
     if binary_receipt_path != home / ".local/share/nebius-grafana-mcp/bin/1.4.0/binary.json":
         raise SetupError("Unexpected binary receipt path.")
-    check_path(binary_receipt_path, home, private=True)
-    receipt = json_read(binary_receipt_path, private=True)
-    binary = Path(env["NEBIUS_GRAFANA_MCP_BINARY"])
-    if str(binary) != receipt.get("path") or receipt.get("version") != "1.4.0":
+    receipt, present = inspect_binary(directory, binary_receipt_path.parent, home)
+    if env["NEBIUS_GRAFANA_MCP_BINARY"] != receipt["path"]:
         raise SetupError("Runtime binary differs from its verified provenance.")
-    if not binary.is_absolute() or binary.resolve(strict=True) != binary:
-        raise SetupError("Runtime binary must use its verified physical path.")
-    for ancestor in binary.parents:
-        info = ancestor.stat()
-        if info.st_uid not in (0, os.getuid()) or info.st_mode & 0o022:
-            if ancestor in (Path("/tmp"), Path("/private/tmp")) and info.st_mode & 0o1000:
-                continue
-            raise SetupError("Runtime binary has an unsafe ancestor.")
-    if digest(read_bytes(binary, system=True, limit=256 * 1024 * 1024)) != receipt.get("sha256"):
-        raise SetupError("Runtime binary integrity changed.")
+    if not present and not allow_missing_binary:
+        raise SetupError("Owned binary is missing; invoke the install skill to repair it.")
+    return present
 
 
 if __name__ == "__main__":

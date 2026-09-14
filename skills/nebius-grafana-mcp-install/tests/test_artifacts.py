@@ -36,7 +36,7 @@ class ArtifactTests(unittest.TestCase):
 
     def acquire(self, data):
         return materialize.acquire_binary(self.fake.source, self.base, self.fake.home,
-                                          download=lambda url: data, candidate="/nonexistent-fixture",
+                                          download=lambda url: data,
                                           system="Linux-x86_64")
 
     def test_checksum_mismatch_publishes_nothing(self):
@@ -81,3 +81,41 @@ class ArtifactTests(unittest.TestCase):
             materialize.acquire_binary(self.fake.source, self.base, self.fake.home,
                                        system="Unknown-platform",
                                        download=lambda url: self.fail("Unexpected download"))
+
+    def test_missing_owned_binary_reacquires_the_pinned_artifact(self):
+        data = self.archive()
+        receipt = self.acquire(data)
+        (self.base / "mcp-grafana").unlink()
+        self.assertEqual(self.acquire(data), receipt)
+        self.assertEqual(digest((self.base / "mcp-grafana").read_bytes()), receipt["sha256"])
+
+    def test_present_binary_or_receipt_drift_never_downloads_or_repairs(self):
+        data = self.archive()
+        receipt = self.acquire(data)
+        binary = self.base / "mcp-grafana"
+        original = binary.read_bytes()
+        for mutation in ("bytes", "mode", "symlink", "path", "source", "archive"):
+            with self.subTest(mutation=mutation):
+                if binary.exists() or binary.is_symlink():
+                    binary.unlink()
+                binary.write_bytes(original)
+                binary.chmod(0o700)
+                changed = dict(receipt)
+                if mutation == "bytes":
+                    binary.write_bytes(b"drift")
+                elif mutation == "mode":
+                    binary.chmod(0o755)
+                elif mutation == "symlink":
+                    binary.unlink()
+                    binary.symlink_to(self.fake.root / "absent")
+                elif mutation == "path":
+                    changed["path"] = str(self.fake.root / "foreign")
+                elif mutation == "source":
+                    changed["source"] = "https://untrusted.example.test/file"
+                else:
+                    changed["archive_sha256"] = "0" * 64
+                (self.base / "binary.json").write_bytes(json_bytes(changed))
+                with self.assertRaises(SetupError):
+                    materialize.acquire_binary(self.fake.source, self.base, self.fake.home,
+                                               system="Linux-x86_64",
+                                               download=lambda url: self.fail("Unexpected download"))

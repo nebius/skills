@@ -20,7 +20,7 @@ Multiple matches require selection; foreign, malformed, symlinked or drifted
 state is refused. Prepared registration can be resumed. A missing ready entry
 or changed client config root needs explicit selectors for repair.
 
-`--check` reports local ownership, settings, file presence and bundle integrity.
+`--check` reports local ownership, registration, file presence and bundle integrity.
 It never authenticates, reads tokens, starts MCP or performs a network check.
 Its JSON includes `update_required`; the agent uses `--apply --update` for owned
 repair/update when indicated, or when explicitly asked to renew authentication.
@@ -38,15 +38,21 @@ installed. Missing prerequisites and native permission blocks are reported.
 
 | Client | Configuration and registration | Startup |
 |---|---|---|
-| Codex | User config.toml, native MCP add/remove and internal JSON inspection; existing CODEX_HOME is honored within the user's home | startup_timeout_sec = 300 |
-| Claude Code | Standard user ~/.claude.json; native --scope user registration and direct internal JSON inspection | User ~/.claude/settings.json env.MCP_TIMEOUT >= 300000 |
+| Codex | User config.toml, native MCP add/remove and internal JSON inspection; existing CODEX_HOME is honored within the user's home | Existing client timeout remains unchanged |
+| Claude Code | Standard user ~/.claude.json; native --scope user registration and direct internal JSON inspection | Existing client timeout remains unchanged |
 
-Setup writes only Claude's `env.MCP_TIMEOUT` string, preserving a larger valid
-value and all unrelated settings. Malformed settings are refused. Exact-byte
-snapshots and atomic replacement reject concurrent edits without overwriting
-them. No shell profile, permission rule, hook or managed setting is changed.
-A managed override or current-session startup state can still require host
-attention; configured timeout is not proof that the running client has reloaded.
+The installer never directly rewrites client configuration or timeout settings.
+It does not open or modify Claude's settings.json. Native MCP add/remove owns
+registration writes. Before/after checks detect observable registration drift;
+they cannot guarantee atomic preservation against every concurrent external
+writer. A detected conflict leaves owned state for inspection and a later retry.
+No shell profile, permission rule, hook or managed setting is changed.
+
+Local initialization, ping and pinned tool/resource discovery are independent of
+authentication and Grafana requests. This removes the need to increase startup
+timeouts. A managed host restriction or a client configured with an unusually
+short timeout can still require attention; initialization alone is not proof of
+authenticated readiness or current-session activation.
 
 When Claude has no user configuration yet, its native add command also creates
 Claude's initial machine/migration metadata. Existing unrelated configuration
@@ -69,10 +75,17 @@ unexpected configuration drift is refused. An origin or human
 identity change requires a distinct installation, not an update of its binding.
 
 A prepared receipt records partial registration. Re-running apply finishes an
-exact owned partial entry, including a Codex add interrupted before its timeout
-was written. It does not restore an entire old configuration or discard another
+exact owned native registration interrupted before final receipt publication. It does not restore an entire old configuration or discard another
 writer's changes. Immutable old bundles remain available; no automatic cleanup
 or rollback restores old credentials.
+
+The executable always resides in the installer-owned version directory and is
+verified against its receipt before reuse. A missing owned executable remains
+discoverable: local check returns `update_required: true`, and normal skill
+invocation reacquires the same checksum-pinned release. A changed executable,
+unsafe path, malformed receipt or provenance mismatch fails closed. There is
+no Homebrew adoption or legacy installation path. Interrupted receipt
+publication recovers only an exact verified artifact, never arbitrary bytes.
 
 ## Locations and removal
 
@@ -96,7 +109,8 @@ used by another installation.
 Apply launches the exact owned wrapper in an isolated helper subprocess with a
 300-second overall verification budget. It performs MCP initialize, initialized
 notification, paginated tool discovery and one `list_datasources` call with
-`limit: 1`. Protocol responses and all raw stderr remain internal; only fixed
+`limit: 1`. During preparation it retries only the exact fixed retryable
+response, without resetting the overall deadline. Protocol responses and all raw stderr remain internal; only fixed
 progress and result fields reach the agent. Empty datasource lists pass. The
 helper stops and reaps its test connection after success, failure or cancellation.
 

@@ -50,6 +50,24 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(self.fake.calls, [])
         self.assertEqual(list(self.fake.home.iterdir()), [])
 
+    def test_missing_owned_binary_is_discoverable_and_repaired_by_normal_apply(self):
+        layout = self.fake.apply()
+        entry = self.fake.read_config("codex")["mcp_servers"][layout.server]
+        binary = Path(entry["env"]["NEBIUS_GRAFANA_MCP_BINARY"])
+        binary.unlink()
+        self.fake.calls.clear()
+        self.assertEqual(setup.resolve_layout(self.fake.home, "codex", env=self.fake.env,
+                                              run=self.fake.run, workdir=self.fake.home), layout)
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(setup.check(layout, self.fake.source, run=self.fake.run,
+                                         env=self.fake.env, workdir=self.fake.home), 3)
+        self.assertTrue(json.loads(output.getvalue())["update_required"])
+        self.assertFalse(binary.exists())
+        self.assertEqual(self.fake.calls, [["codex", "mcp", "get", layout.server, "--json"]])
+        self.fake.apply(layout, update=True)
+        self.assertTrue(binary.exists())
+        self.assertTrue(runtime_check.validate(layout.home, Path(entry["command"]).parent, entry["env"]))
+
     def test_repeated_token_does_not_receive_a_later_observation_time(self):
         layout = self.fake.apply()
         token = layout.state / "iam-token"
@@ -214,7 +232,7 @@ class SetupTests(unittest.TestCase):
         self.assertNotIn("startup_timeout_sec", entry)
         self.fake.calls.clear()
         self.fake.apply()
-        self.assertEqual(self.fake.read_config("codex")["mcp_servers"]["grafana-nebius"]["startup_timeout_sec"], 300)
+        self.assertNotIn("startup_timeout_sec", self.fake.read_config("codex")["mcp_servers"]["grafana-nebius"])
         self.assertFalse(any(call[1:3] == ["mcp", "remove"] for call in self.fake.calls))
         self.assertEqual(json.loads(self.fake.layout().receipt.read_bytes())["phase"], "ready")
 
@@ -397,6 +415,84 @@ class SetupTests(unittest.TestCase):
         child_pid = int(marker.read_text())
         with self.assertRaises(ProcessLookupError):
             os.kill(child_pid, 0)
+
+
+class FrozenGenerationTests(unittest.TestCase):
+    def setUp(self):
+        self.fake = FakeSystem()
+        self.addCleanup(self.fake.close)
+        self.observed = 1000000.75
+        self.token = self.fake.home / "iam-token"
+        self.token.write_bytes(b"synthetic-generation-token\n")
+        self.token.chmod(0o600)
+        self.metadata = {"version": 2, "sha256": digest(token_state.token_bytes(self.token)),
+                         "observed_at": self.observed}
+        self.token.with_suffix(".json").write_bytes(json_bytes(self.metadata))
+        self.token.with_suffix(".json").chmod(0o600)
+        self.generation = self.fake.home / "iam-token.restart.fixture.generation"
+        with mock.patch.object(token_state.time, "time", return_value=self.observed + 3599):
+            self.assertEqual(token_state.freeze(self.token, self.generation, self.fake.home), self.observed)
+
+    def generation_observed(self, now):
+        with (mock.patch.object(token_state.time, "time", return_value=now),
+              mock.patch.object(sys, "argv", ["token_state.py", "generation-observed", str(self.generation)]),
+              contextlib.redirect_stdout(io.StringIO()) as output,
+              contextlib.redirect_stderr(io.StringIO()) as error):
+            status = token_state.main()
+        return status, output.getvalue(), error.getvalue()
+
+    def test_watchdog_attachment_accepts_generation_after_startup_boundary(self):
+        before = self.generation.read_bytes()
+        self.assertEqual(self.generation_observed(self.observed + 3601),
+                         (0, f"{int(self.observed)}\n", ""))
+        self.assertEqual(self.generation.read_bytes(), before)
+        self.assertEqual(self.fake.calls, [])
+        with self.assertRaises(SetupError):
+            token_state.snapshot(self.token, now=self.observed + 3601)
+        rejected = self.fake.home / "rejected-generation"
+        with mock.patch.object(token_state.time, "time", return_value=self.observed + 3601):
+            with self.assertRaises(SetupError):
+                token_state.freeze(self.token, rejected, self.fake.home)
+        self.assertFalse(rejected.exists())
+
+    def test_watchdog_reader_enforces_original_operational_age_boundary(self):
+        for age, expected in ((0, 0), (3600, 0), (3601, 0), (token_state.STOP_AGE - 0.5, 0),
+                              (token_state.STOP_AGE, 1), (token_state.STOP_AGE + 1, 1), (-1, 1)):
+            with self.subTest(age=age):
+                status, output, error = self.generation_observed(self.observed + age)
+                self.assertEqual(status, expected)
+                if expected:
+                    self.assertEqual(output, "")
+                    self.assertEqual(error, "Token state validation failed; credential contents withheld.\n")
+
+    def test_watchdog_reader_rejects_malformed_generation(self):
+        invalid = [{**self.metadata, "observed_at": value}
+                   for value in (True, False, None, "1000000", float("nan"), float("inf"), -float("inf"))]
+        invalid += [{**self.metadata, "sha256": value} for value in (None, [], "not-a-hash", "A" * 64)]
+        invalid += [{**self.metadata, "version": 1}, {**self.metadata, "extra": 1},
+                    {"version": 2, "sha256": self.metadata["sha256"]}, []]
+        for index, value in enumerate(invalid):
+            with self.subTest(case=index):
+                self.generation.write_bytes(json_bytes(value))
+                status, output, error = self.generation_observed(self.observed + 100)
+                self.assertEqual((status, output), (1, ""))
+                self.assertEqual(error, "Token state validation failed; credential contents withheld.\n")
+
+    def test_watchdog_reader_rejects_unsafe_private_file(self):
+        self.generation.chmod(0o644)
+        self.assertEqual(self.generation_observed(self.observed + 100)[0:2], (1, ""))
+        self.generation.chmod(0o600)
+        other = self.fake.home / "generation-copy"
+        self.generation.rename(other)
+        self.generation.symlink_to(other)
+        self.assertEqual(self.generation_observed(self.observed + 100)[0:2], (1, ""))
+
+    def test_delayed_watchdog_attachment_keeps_original_deadline(self):
+        start_wall, start_mono = self.observed + 3601, 10
+        remaining = token_state.remaining(self.observed, start_wall, start_mono, start_wall, start_mono)
+        self.assertEqual(remaining, token_state.STOP_AGE - 3601)
+        self.assertEqual(token_state.remaining(self.observed, start_wall, start_mono,
+                                               self.observed + token_state.STOP_AGE, start_mono + remaining), 0)
 
 
 if __name__ == "__main__":

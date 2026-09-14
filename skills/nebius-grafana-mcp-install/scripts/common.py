@@ -105,7 +105,11 @@ def unique_object(pairs):
 
 
 def atomic_write(path, data, home, *, expected=None, mode=0o600):
-    """Replace only the exact inspected bytes; None means the file must be absent."""
+    """Atomic publication for owned state; writers must hold the owning lock.
+
+    Expected-byte checks detect drift but are not filesystem compare-and-swap.
+    Never use this helper to edit shared client configuration.
+    """
     check_path(path.parent, home, directory=True)
     check_path(path, home, missing=True)
 

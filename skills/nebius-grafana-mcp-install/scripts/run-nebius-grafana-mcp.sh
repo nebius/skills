@@ -966,6 +966,17 @@ run_refresh_loop() {
   trap 'request_refresh_worker_stop 130' INT
   trap 'request_refresh_worker_stop 143' TERM
 
+  # Protocol discovery runs concurrently; this worker owns preparation and renewal.
+  if ! token_file_is_fresh; then
+    refresh_token noninteractive || return 1
+    exit_if_refresh_worker_stop_requested
+  fi
+  loaded_observed_at="$(python3 -B "$script_dir/token_state.py" freeze "$GRAFANA_TOKEN_FILE" "$generation_file")" || return 1
+  refresh_after_seconds=$((loaded_observed_at + 36000 - $(date +%s)))
+  [ "$refresh_after_seconds" -ge 0 ] || refresh_after_seconds=0
+  if [ "$NEBIUS_GRAFANA_TOKEN_REFRESH_SECONDS" -lt "$refresh_after_seconds" ]; then
+    refresh_after_seconds="$NEBIUS_GRAFANA_TOKEN_REFRESH_SECONDS"
+  fi
   wait_for_worker_timer "$refresh_after_seconds"
   exit_if_refresh_worker_stop_requested
   if ! refresh_with_retries; then
@@ -1041,27 +1052,11 @@ if [ "${1:-}" = "--refresh-token-only" ]; then
 fi
 
 build_mcp_args "$@"
-if ! token_file_is_fresh; then
-  printf 'warning: cached pinned-human token is missing or older than one hour; renewing it before MCP startup\n' >&2
-  refresh_token noninteractive \
-    || die "human authentication is required; invoke nebius-grafana-mcp-install again and complete browser sign-in if needed"
-  token_file_is_fresh \
-    || die "renewed pinned-human token failed the startup freshness check"
-fi
-
 refresh_reason_file="$(mktemp "${GRAFANA_TOKEN_FILE}.restart.XXXXXX")" \
   || die "unable to create private refresh-reason state"
 chmod 600 "$refresh_reason_file"
 validate_private_file "$refresh_reason_file"
 generation_file="${refresh_reason_file}.generation"
-loaded_observed_at="$(python3 -B "$script_dir/token_state.py" freeze "$GRAFANA_TOKEN_FILE" "$generation_file")" \
-  || die "unable to freeze the startup token generation"
-refresh_after_seconds=$((loaded_observed_at + 36000 - $(date +%s)))
-[ "$refresh_after_seconds" -ge 0 ] || refresh_after_seconds=0
-if [ "$NEBIUS_GRAFANA_TOKEN_REFRESH_SECONDS" -lt "$refresh_after_seconds" ]; then
-  refresh_after_seconds="$NEBIUS_GRAFANA_TOKEN_REFRESH_SECONDS"
-fi
-
 # Bash redirects stdin for asynchronous commands to /dev/null when job control
 # is unavailable unless the command has an explicit stdin redirection. Preserve
 # the wrapper's MCP stdio stream on a private descriptor before backgrounding.
@@ -1092,9 +1087,6 @@ if [ -z "$mcp_process_started_at" ]; then
   finish "$status"
 fi
 
-python3 -B "$script_dir/token_state.py" watch "$loaded_observed_at" "$refresh_reason_file" &
-deadline_pid="$!"
-deadline_process_started_at="$(process_started_at "$deadline_pid" 2>/dev/null || true)"
 run_refresh_loop &
 refresher_pid="$!"
 refresher_process_started_at="$(
@@ -1121,8 +1113,19 @@ while process_is_live_instance "$mcp_pid" "$mcp_process_started_at"; do
     fi
     break
   fi
-  if ! process_is_live_instance "$deadline_pid" "$deadline_process_started_at" \
-    || process_is_stopped_instance "$deadline_pid" "$deadline_process_started_at"; then
+  if [ -z "$deadline_pid" ] && [ -e "$generation_file" ]; then
+    loaded_observed_at="$(python3 -B "$script_dir/token_state.py" generation-observed "$generation_file")" \
+      || die "invalid prepared token generation"
+    python3 -B "$script_dir/token_state.py" watch "$loaded_observed_at" "$refresh_reason_file" &
+    deadline_pid="$!"
+    deadline_process_started_at="$(process_started_at "$deadline_pid" 2>/dev/null || true)"
+  fi
+  if [ -z "$deadline_pid" ] && process_is_stopped_instance "$refresher_pid" "$refresher_process_started_at"; then
+    stop_owned_mcp_from_parent || true
+    die "credential preparation worker stopped"
+  fi
+  if [ -n "$deadline_pid" ] && { ! process_is_live_instance "$deadline_pid" "$deadline_process_started_at" \
+    || process_is_stopped_instance "$deadline_pid" "$deadline_process_started_at"; }; then
     if stop_owned_mcp_from_parent; then
       confirmed_refresh_reason="deadline-worker-failed"
     fi

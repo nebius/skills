@@ -11,4 +11,9 @@ and removal of donor-specific installation paths and private endpoint defaults.
 
 Grafana MCP is obtained separately from the official Apache-2.0 project:
 https://github.com/grafana/mcp-grafana
-No upstream binaries are vendored here.
+No upstream binaries are vendored here. scripts/catalog.json contains public
+MCP discovery metadata generated from the checksum-verified v1.4.0 executable
+with the exact read-only arguments in scripts/runtime_contract.py. Upstream
+metadata remains covered by the upstream Apache-2.0 license. Regenerate or
+verify it with scripts/capture_catalog.py; capture uses a disposable home and
+an isolated loopback endpoint without cloud credentials.

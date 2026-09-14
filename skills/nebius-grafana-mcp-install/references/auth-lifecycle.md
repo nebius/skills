@@ -12,6 +12,22 @@ validates it and atomically replaces the token file. Errors use fixed messages;
 raw CLI output is withheld. The proxy reads one frozen generation. Stock MCP
 receives only an ephemeral credential for the local proxy.
 
+## Asynchronous preparation
+
+The local MCP frontend serves the checksum-bound public discovery catalog
+immediately. A separate worker reuses a valid fresh token or refreshes it
+noninteractively, then freezes one generation. Only then does the real stock
+MCP start and obtain real Grafana frontend metadata. The bridge privately
+initializes it and verifies all advertised tools and resources against the
+pinned catalog before forwarding operations.
+
+Preparation includes backend discovery and is limited to 240 seconds. While
+pending, tool calls and resource reads return a fixed retryable `preparing`
+error and perform no Grafana read. Calls are not queued or replayed. The caller
+may retry; bundled setup retries within its existing verification budget.
+Failed preparation, a mismatched catalog or backend failure closes the owned
+connection. Background authentication never opens a browser.
+
 ## Observation-based scheduling
 
 Nebius documents short-lived IAM access tokens, but the selected CLI command
@@ -19,12 +35,17 @@ does not supply authoritative expiry metadata to this runtime. `observed_at`
 records when this helper first observed a token generation. It is not `issued_at`
 and does not prove how long the credential remains valid.
 
-- Startup reuses a generation observed within one hour.
+- Startup credential inspection, freezing and backend loading require a
+  generation observed within one hour. Once loaded, crossing that boundary
+  does not invalidate the connection while its watchdog attaches.
 - Renewal is scheduled ten hours after observation; bounded retries use delays
   of 60, 300 and 900 seconds.
 - Each connection stops by its eleven-hour operational cap. Wall-clock and
   monotonic limits prevent clock rollback or a peer's token replacement from
   extending that connection's cap.
+- Watchdog attachment validates the frozen generation against that original
+  eleven-hour deadline. It neither refreshes the token nor changes its
+  observation time; future-dated or already capped generations are refused.
 - Identical token bytes retain the earlier observation time, including when
   only the CLI's line ending changes. Repeated cached bytes are not rotation.
 - Successful rotation ends the old stdio connection with exit 75. A new client
@@ -55,15 +76,6 @@ recovery guidance. Recovery never invents metadata or relabels a token as newer.
 
 A failed or stopped deadline/renewal worker stops the MCP connection. Shutdown
 removes only owned temporary files and terminates the proxy and MCP processes.
-
-Before updating a pre-fix runtime, stop every old or new runtime sharing the
-selected state directory. A pre-fix owner-pid.tmp can remain inside iam-token.lock;
-the updated code neither creates nor automatically deletes it. Only after all
-writers are confirmed stopped may the human inspect ownership, file types and
-the exact selected state path, remove that residue, and remove the now-empty
-lock directory. Preserve unexpected contents and refuse symlinked paths; do not
-use recursive deletion or infer quiescence from age alone. Then rerun owned
-setup and reconnect. This is operator recovery, not an agent-run cleanup action.
 
 The directory-lock protocol remains in place. These targeted repairs do not
 establish that its age-based incomplete-lock recovery is safe against an

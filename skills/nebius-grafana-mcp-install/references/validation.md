@@ -1,60 +1,65 @@
 # Validation evidence
 
-The agent-run revision was validated on macOS on 2026-09-14. All new credential
-and Grafana data were synthetic. Existing installed skills, actual client
-registration and authentication state were preserved; no live token was issued.
-
-The subsequent documentation-only scope correction restored shared policy and
-all other skills to the PR base. Exact comparison confirms only this skill's
-README table row and one concise CHANGELOG entry differ outside its folder.
-Repository structural checks, all eleven shared preambles, spec validation,
-JSON parsing, local links, diff whitespace and scoped Markdown checks passed.
-Independent read-only review found no introduced serious defect. The local
-credential workflow differs from generic catalog rules as documented in
-[runtime security](runtime-security.md); higher-priority restrictions still
-apply. Runtime scripts and tests were unchanged, so the prior runtime evidence
-below was retained without rerunning the suite for this correction.
+The watchdog boundary fix was validated on macOS on 2026-09-14.
+Credentials and Grafana data in tests were synthetic. Native client checks used
+disposable homes in the preceding revision; those checks were not rerun for
+this boundary fix. Actual installed client/authentication state was preserved.
 
 | Evidence | Result |
 | --- | --- |
-| Full deterministic suite | 92 tests passed in 147.559 seconds, including setup, artifacts, actual wrapper subprocesses, HTTP proxy, MCP protocol and renewal/rotation |
-| Final focused regressions | Paused-wrapper/stalled-MCP cleanup and malformed-owned-binding cases pass in the full 92-test suite |
-| Native client registration | Actual Codex and Claude CLIs passed initial registration, repeat apply, owned-binding reuse, local check and helper readiness in disposable homes with synthetic authentication/MCP fixtures |
-| Browser-required workflow | A synthetic CLI requiring browser-mode authentication resumed setup and verification; its diagnostic login URL stayed out of helper output |
-| Readiness transport | Actual synthetic stdio to bridge to credential proxy to local HTTP datasource read passed; the production wrapper was separately exercised for both clients |
-| Datasource health | Healthy and error JSON, unsupported-handler HTTP status, UID verification and exact method/body/query/neighbor restrictions passed |
-| Repository validation | scripts/validate.sh passed shared preamble sync, frontmatter, Agent Skills spec, manifest versions and native Claude plugin validation |
-| Code checks | Ruff, ShellCheck, Python AST, Bash syntax, JSON parsing and git diff whitespace passed |
-| Markdown | No introduced diagnostics relative to HEAD, with existing line-length and generated-table exclusions; unrelated baseline Markdown style issues remain |
-| Security and code review | Prior origin-selection and paused-wrapper findings remain covered; the subsequent explicit alignment review found no additional code or security defects |
-| Behavioral definitions | Skill-local scenarios updated for automatic setup, missing selectors, privacy, host activation and datasource-health separation; these are definitions, not model-run evidence |
+| Full deterministic suite | 110 tests passed in 180.472 seconds: setup, owned artifacts, frontend routing, actual wrapper subprocesses, HTTP proxy, protocol protection and token lifecycle |
+| Watchdog boundary regression | A synthetic generation frozen at observation plus 3599 seconds failed attachment at plus 3601 before the source fix and passed afterward; five new mocked-clock tests cover original metadata/deadline preservation, unchanged admission checks, operational cutoff and invalid/private-file rejection |
+| Startup separation | With token minting delayed 12 seconds, initialization and tool/resource discovery completed within 5 seconds; pending calls returned the fixed retryable response and no stock backend had started |
+| Preparation deadline | The actual wrapper with a shortened fixture deadline terminated a stalled backend while client stdin remained open; elapsed time and owned-child cleanup were verified |
+| Binary recovery | Missing owned executable remained discoverable, check requested update, and apply restored it; byte/mode/path/provenance drift failed closed; receipt interruption and offline reuse passed |
+| Shared configuration | Native MCP registration passed without timeout insertion or settings.json creation; existing, symlinked and concurrently edited Claude settings remained untouched |
+| Pinned discovery catalog (preceding revision) | capture_catalog.py --check reproduced the committed catalog from the checksum-verified official MCP 1.4.0: 22 tools, one resource, no templates; isolated loopback endpoint and no cloud credentials |
+| Native clients (preceding revision) | Actual Codex and Claude CLIs passed initial registration, repeat apply, owned-binding reuse, local check and helper readiness in disposable homes with synthetic authentication/MCP |
+| Skill distribution (preceding revision) | skills 1.5.26 discovery, Codex/Claude copy parity, repeat install and isolation passed in disposable homes |
+| Repository validation | Shared-preamble and frontmatter checks passed for all eleven skills after the boundary fix; the preceding revision also passed scripts/validate.sh, including skills-ref, manifests and native Claude plugin validation |
+| Code and docs | Ruff, ShellCheck, Bash syntax, Python AST, JSON parsing, local links, spec validation, scoped Markdown and diff whitespace passed |
+| Read-only review | Focused review of the watchdog fix and five new tests found no additional defect; independent execution of those five tests passed |
+| Security review | One-hour credential admission, original operational deadline, metadata validation and private-file/output protection remain intact; no new unresolved finding in this change |
+| Scope | Only the installer folder, its existing root README table row and one concise changelog entry differ from the PR base; PR remains Draft |
+| Behavioral definitions | Six canonical trigger cases and local setup scenarios; STATIC_PASS, not model-run evidence |
 | CI coverage | Root CI and eval discovery unchanged by explicit scope decision; run the skill-local suite separately |
-| Fresh skill/model behavior | NOT_RUN; installed skill directories and the active host were preserved |
-| Live browser/Grafana access | NOT_RUN for this revision; synthetic sign-in and HTTP tests do not prove live identity, entitlement or endpoint compatibility |
+| Fresh skill/model behavior | NOT_RUN; runtime trigger and comparative model-output quality were not exercised |
+| Live browser/Grafana access | NOT_RUN; synthetic sign-in and HTTP tests do not prove live identity, entitlement or endpoint compatibility |
 | Live renewal/current-chat activation | NOT_RUN; accelerated lifecycle fixtures do not prove future human-login renewal or host reconnection |
-| Linux execution | NOT_RUN; GNU stat fixture coverage on macOS does not establish complete Linux support |
+| Linux execution | NOT_RUN; GNU stat coverage on macOS does not establish complete Linux support |
 
-The health regression failed against the previous proxy before the exact-route
-repair. Read-only review independently reproduced both selector and paused
-process defects. The repaired paused-wrapper/stalled-MCP reproduction completed
-in 2.8 seconds with no surviving bridge group. Its regression waits for an
-initialize request to reach the stalled fixture before suspending the wrapper.
+## Additional validator limits
 
-The first full revision run found an obsolete fixture expectation for the
-pinned MCP datasource-list result. Updating that expectation from an array to
-the upstream result object resolved the failure; the full suite above passed.
-The defensive shape check for malformed owned environment bindings and the
-strengthened stalled-child cleanup case also pass in the full alignment run.
+The separate cross-catalog align-skill structural validator reports the same
+findings for this revision and an isolated HEAD baseline: list-valued
+allowed-tools instead of its strict standard string, a repository-specific Help
+contract, an incorrect implicit-invocation expectation, and a repo-root
+validation command interpreted as a missing skill-relative resource. Its core,
+Codex and Claude profiles therefore remain FAIL; this is not a full pass of that
+validator. The target repository's own checks and actual distribution/client
+checks above pass. Invocation controls and existing catalog conventions were
+preserved; these unrelated format/policy differences were not changed.
 
-Earlier human-operated source, native-client and live compatibility evidence is
-historical and does not verify this revised installation workflow. Existing
-renewal, original observation timestamps, frozen generations, concurrency and
-interrupted-publication tests remain in the suite. No check establishes
-uninterrupted operation, authoritative token expiry or merge approval.
+## Evidence boundaries
 
-The directory-lock protocol and explicit residue-recovery boundary are
-unchanged. Age-based incomplete-lock recovery against a paused initializer
-remains unproven and outside this revision. Same-user file/process access,
-upstream DNS establishment limits and unrelated secrets in telemetry remain
-explicit in [runtime security](runtime-security.md) and
+The earlier two findings are resolved at their owners: the installer no longer
+directly rewrites shared client settings, and it no longer records an externally
+managed Homebrew executable. Native commands retain their own concurrency
+semantics; before/after comparisons cannot promise protection against every
+external writer. Initialization/discovery are local and cannot establish
+successful authentication. Readiness still requires a real datasource list
+through the authenticated backend.
+
+CR-GRAFANA-003 is resolved in the frozen-generation reader: watchdog attachment
+uses the original eleven-hour operational cap, while credential inspection,
+freezing and backend loading retain the one-hour admission limit. The fix does
+not refresh credentials, change observation metadata or extend the deadline.
+
+Existing health routing, renewal, original observation timestamps, frozen
+generations, concurrency, output protection and interrupted-publication cases
+remain covered. No check establishes uninterrupted operation, authoritative
+token expiry or merge approval. The unchanged directory-lock protocol's
+age-based recovery against a paused initializer remains unproven. Same-user
+file/process access, upstream DNS establishment limits and unrelated secrets in
+telemetry remain explicit in [runtime security](runtime-security.md) and
 [authentication lifecycle](auth-lifecycle.md).

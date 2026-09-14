@@ -12,6 +12,7 @@ import unittest
 
 from fixtures import FakeSystem
 import token_state
+from mcp_frontend import PREPARING, PROTOCOL
 
 
 class RuntimeTests(unittest.TestCase):
@@ -108,16 +109,33 @@ class RuntimeTests(unittest.TestCase):
         owner.chmod(0o600)
         return holder, lock
 
-    def rpc(self, process, method, request_id):
+    def rpc(self, process, method, request_id, params=None, *, raw=False):
         process.stdin.write((json.dumps({"jsonrpc": "2.0", "id": request_id,
-                                        "method": method, "params": {}}) + "\n").encode())
+                                        "method": method, "params": params or (
+                                            {"name": "list_datasources", "arguments": {}}
+                                            if method == "tools/call" else {})}) + "\n").encode())
         process.stdin.flush()
         with selectors.DefaultSelector() as selector:
             selector.register(process.stdout, selectors.EVENT_READ)
             self.assertTrue(selector.select(timeout=10), "MCP response timed out")
         line = process.stdout.readline()
         self.assertTrue(line, "MCP exited before responding")
-        return json.loads(line)["result"]
+        response = json.loads(line)
+        return response if raw else response["result"]
+
+    def connect_ready(self, process, request_id):
+        result = self.rpc(process, "initialize", request_id,
+                          {"protocolVersion": PROTOCOL, "capabilities": {}})
+        process.stdin.write(b'{"jsonrpc":"2.0","method":"notifications/initialized"}\n')
+        process.stdin.flush()
+        deadline = time.monotonic() + 8
+        while time.monotonic() < deadline:
+            response = self.rpc(process, "tools/call", request_id + 1000, raw=True)
+            if response.get("error") != PREPARING:
+                self.assertIn("result", response)
+                return result
+            time.sleep(0.05)
+        self.fail("Authenticated backend did not become ready")
 
     def events(self):
         return [json.loads(line) for line in (self.fake.root / "mcp.jsonl").read_text().splitlines()]
@@ -141,6 +159,53 @@ class RuntimeTests(unittest.TestCase):
             with self.assertRaises(ProcessLookupError):
                 os.kill(event["pid"], 0)
 
+    def test_slow_auth_does_not_delay_local_discovery_or_forward_pending_calls(self):
+        layout = self.fake.apply()
+        (layout.state / "iam-token.json").unlink()
+        started = time.monotonic()
+        process = self.start(FAKE_MINT_DELAY="12")
+        result = self.rpc(process, "initialize", 1, {"protocolVersion": PROTOCOL, "capabilities": {}})
+        self.assertEqual(result["serverInfo"]["name"], "fixture")
+        process.stdin.write(b'{"jsonrpc":"2.0","method":"notifications/initialized"}\n')
+        process.stdin.flush()
+        self.assertTrue(self.rpc(process, "tools/list", 2)["tools"])
+        self.assertEqual(self.rpc(process, "resources/list", 3), {"resources": []})
+        self.assertLess(time.monotonic() - started, 5)
+        self.assertFalse((self.fake.root / "mcp.jsonl").exists())
+        self.assertEqual(self.rpc(process, "tools/call", 4, raw=True)["error"], PREPARING)
+        deadline = time.monotonic() + 18
+        while time.monotonic() < deadline:
+            response = self.rpc(process, "tools/call", 5, raw=True)
+            if response.get("error") != PREPARING:
+                self.assertIn("result", response)
+                break
+            time.sleep(0.1)
+        else:
+            self.fail("Prepared backend never became usable")
+        self.assertGreater(time.monotonic() - started, 12)
+        commands = list(map(json.loads, (self.fake.root / "commands.jsonl").read_text().splitlines()))
+        self.assertTrue(all("--no-browser" in args for args in commands[-3:]))
+        process.terminate()
+        process.communicate(timeout=10)
+        self.assert_clean(layout)
+
+    def test_stalled_backend_does_not_block_discovery_and_is_stopped_at_preparation_deadline(self):
+        frontend = self.fake.source / "mcp_frontend.py"
+        frontend.write_text(frontend.read_text().replace("PREPARE_SECONDS = 240", "PREPARE_SECONDS = 2"))
+        layout = self.fake.apply()
+        started = time.monotonic()
+        process = self.start(FAKE_MCP_MODE="stall")
+        self.rpc(process, "initialize", 1, {"protocolVersion": PROTOCOL, "capabilities": {}})
+        process.stdin.write(b'{"jsonrpc":"2.0","method":"notifications/initialized"}\n')
+        process.stdin.flush()
+        self.assertTrue(self.rpc(process, "tools/list", 2)["tools"])
+        process.wait(timeout=12)
+        self.assertGreaterEqual(time.monotonic() - started, 2)
+        stdout, stderr = process.communicate()
+        self.assertNotEqual(process.returncode, 0)
+        self.assertNotIn(b"synthetic-token", stdout + stderr)
+        self.assert_clean(layout)
+
     def test_gnu_stat_supports_refresh_and_mcp_startup(self):
         executable = shutil.which("gstat") or shutil.which("stat")
         if not executable or b"GNU coreutils" not in subprocess.run(
@@ -155,7 +220,7 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr.decode())
         self.assertEqual((self.fake.root / "counter").read_text(), "2")
         process = self.start()
-        self.assertEqual(self.rpc(process, "initialize", 1)["serverInfo"]["name"], "fixture")
+        self.assertEqual(self.connect_ready(process, 1)["serverInfo"]["name"], "fixture")
         process.terminate()
         process.communicate(timeout=10)
         self.assert_clean(layout)
@@ -166,7 +231,7 @@ class RuntimeTests(unittest.TestCase):
                              NEBIUS_IAM_TOKEN="SENTINEL-AMBIENT",
                              GRAFANA_SERVICE_ACCOUNT_TOKEN="SENTINEL-AMBIENT",
                              GRAFANA_EXTRA_HEADERS="SENTINEL-AMBIENT")
-        self.assertEqual(self.rpc(process, "initialize", 1)["serverInfo"]["name"], "fixture")
+        self.assertEqual(self.connect_ready(process, 1)["serverInfo"]["name"], "fixture")
         self.assertEqual(self.rpc(process, "tools/list", 2)["tools"][0]["name"], "list_datasources")
         self.assertEqual(json.loads(self.rpc(process, "tools/call", 3)["content"][0]["text"]),
                          {"datasources": [], "total": 0, "hasMore": False})
@@ -178,7 +243,7 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual((self.fake.root / "counter").read_text(), "2")
         first = self.events()[0]
         process = self.start()
-        self.rpc(process, "initialize", 4)
+        self.connect_ready(process, 4)
         second = self.events()[1]
         self.assertNotEqual(first["pid"], second["pid"])
         self.assertNotEqual(first["generation"], second["generation"])
@@ -190,7 +255,7 @@ class RuntimeTests(unittest.TestCase):
         layout = self.fake.apply()
         before = (layout.state / "iam-token.json").read_bytes()
         process = self.start(NEBIUS_GRAFANA_TOKEN_REFRESH_SECONDS="1", FAKE_SAME_TOKEN="1")
-        self.rpc(process, "initialize", 1)
+        self.connect_ready(process, 1)
         process.wait(timeout=15)
         stdout, stderr = process.communicate()
         self.assertEqual(process.returncode, 1)
@@ -229,7 +294,7 @@ class RuntimeTests(unittest.TestCase):
         process = self.start(NEBIUS_GRAFANA_TOKEN_REFRESH_SECONDS="1",
                              NEBIUS_GRAFANA_TOKEN_REFRESH_RETRY_SECONDS="0 0 0",
                              FAKE_FAIL_MINT="1")
-        self.rpc(process, "initialize", 1)
+        self.connect_ready(process, 1)
         process.wait(timeout=20)
         stdout, stderr = process.communicate()
         self.assertEqual(process.returncode, 1)
@@ -240,7 +305,7 @@ class RuntimeTests(unittest.TestCase):
     def test_stopped_watchdog_stops_mcp_without_hanging_cleanup(self):
         layout = self.fake.apply()
         process = self.start()
-        self.rpc(process, "initialize", 1)
+        self.connect_ready(process, 1)
         watchdog = self.watchdog(process)
         os.kill(watchdog, signal.SIGSTOP)
         process.wait(timeout=10)
@@ -257,7 +322,7 @@ class RuntimeTests(unittest.TestCase):
         source.write_text(source.read_text().replace("STOP_AGE = 39600", "STOP_AGE = 5"))
         layout = self.fake.apply()
         process = self.start()
-        self.rpc(process, "initialize", 1)
+        self.connect_ready(process, 1)
         args, env = self.fake.runtime_command()
         time.sleep(1)
         result = subprocess.run([args[0], "--refresh-token-only"], env=env,

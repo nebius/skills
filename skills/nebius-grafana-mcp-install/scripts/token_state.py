@@ -92,6 +92,16 @@ def main():
             record(Path(path), float(sys.argv[3]), Path.home())
         elif action == "inspect":
             print(int(inspect(Path(path))))
+        elif action == "generation-observed":
+            meta = json_read(Path(path), private=True)
+            observed = meta.get("observed_at")
+            # Credential loading owns startup freshness. Watchdog attachment
+            # tracks this frozen generation's original operational deadline.
+            if (set(meta) != {"version", "sha256", "observed_at"} or meta["version"] != 2
+                    or type(observed) not in (int, float) or not 0 <= time.time() - observed < STOP_AGE
+                    or not isinstance(meta["sha256"], str) or not re.fullmatch(r"[a-f0-9]{64}", meta["sha256"])):
+                raise SetupError("Invalid prepared generation.")
+            print(int(observed))
         elif action == "watch":
             watch(float(path), sys.argv[3])
         elif action == "freeze":

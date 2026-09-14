@@ -12,6 +12,7 @@ import selectors
 import signal
 import subprocess
 import sys
+import threading
 
 from common import SetupError, check_path, json_read
 from credential_proxy import Backend, MAX_RESPONSE, ProxyError, decode_json, serve
@@ -153,12 +154,43 @@ def main():
         generation = Path(os.environ["NEBIUS_GRAFANA_GENERATION_FILE"])
         if generation.parent != path.parent or not generation.name.startswith("iam-token.restart."):
             raise SetupError("Unexpected token generation binding.")
-        check_path(generation, Path.home(), private=True)
-        token, metadata = token_state.snapshot(path)
-        if metadata != json_read(generation, private=True):
-            raise SetupError("Token generation changed during startup; reconnect.")
-        backend = Backend(os.environ["GRAFANA_URL"], token.decode("ascii"))
-        return run(Path(os.environ["NEBIUS_GRAFANA_MCP_BINARY"]), backend)
+        from mcp_frontend import exchange as frontend_exchange, load_catalog
+        catalog = load_catalog(Path(__file__).resolve().parent)
+        backend_read, frontend_write = os.pipe()
+        frontend_read, backend_write = os.pipe()
+        stopped = threading.Event()
+        cancel_worker = threading.Event()
+
+        def prepare():
+            try:
+                while not generation.exists():
+                    if cancel_worker.wait(0.05):
+                        return
+                    check_path(generation, Path.home(), private=True, missing=True)
+                check_path(generation, Path.home(), private=True)
+                token, metadata = token_state.snapshot(path)
+                if metadata != json_read(generation, private=True):
+                    raise SetupError("Token generation changed during startup; reconnect.")
+                backend = Backend(os.environ["GRAFANA_URL"], token.decode("ascii"))
+                if not cancel_worker.is_set():
+                    run(Path(os.environ["NEBIUS_GRAFANA_MCP_BINARY"]), backend,
+                        stdin_fd=backend_read, stdout_fd=backend_write)
+            except (SetupError, ProxyError, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
+                pass  # The front connection gets only a fixed failure.
+            finally:
+                stopped.set()
+                os.close(backend_read)
+                os.close(backend_write)
+
+        worker = threading.Thread(target=prepare, daemon=True)
+        worker.start()
+        try:
+            return frontend_exchange(catalog, frontend_write, frontend_read, stopped)
+        finally:
+            cancel_worker.set()
+            os.close(frontend_write)
+            os.close(frontend_read)
+            worker.join(timeout=3)
     except KeyboardInterrupt:
         return 130
     except (SetupError, ProxyError, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
