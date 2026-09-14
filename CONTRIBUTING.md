@@ -19,14 +19,7 @@
 7. **Templates over flag soup**: every `create` path ships a commented `-f` YAML request template in `assets/`, used as `nebius <svc> <res> create -f <file>`. Where the CLI is flags-only (e.g. `ai job create` / `ai endpoint create` have no `-f`/`--file` input), ship a fully commented command skeleton in `assets/` instead — every valid flag listed, placeholders marked.
 8. **`allowed-tools` enumerates read-only command prefixes only** — never `Bash(nebius:*)`, which would pre-approve `delete`. Mutations must go through the client's normal permission flow. Nothing outside `nebius` belongs there either: `Bash(jq:*)` would pre-approve `jq . ~/.nebius/credentials.json`, so jq stays on the normal permission flow (a pipe whose left side is allowed still only prompts once).
 9. **No time-sensitive statements** in skill bodies. Deprecations go in a collapsed "Old patterns" section with their sunset date.
-10. **No secrets, no real IDs**: never expose tokens or keys to agent output or repository files; private credential persistence is allowed only by the bounded Grafana installer exception in `SECURITY.md`; never commit real tenant/project NIDs — templates use `project-e00example` style placeholders (the lint checks this).
-
-The Grafana installer keeps its behavioral scenarios and synthetic runtime tests
-inside the skill folder; this contribution does not add root evals or CI jobs.
-Changes to that runtime must run its local suite and record source, isolated
-native-client, and live evidence separately. Never mint a real token merely to
-validate the contribution. Its installation exception does not relax the
-read-only `allowed-tools` rule or authorize other credential helpers.
+10. **No secrets, no real IDs**: never print/persist tokens or keys; never commit real tenant/project NIDs — templates use `project-e00example` style placeholders (the lint checks this).
 
 ## Shared preamble
 

@@ -4,6 +4,17 @@ The agent-run revision was validated on macOS on 2026-09-14. All new credential
 and Grafana data were synthetic. Existing installed skills, actual client
 registration and authentication state were preserved; no live token was issued.
 
+The subsequent documentation-only scope correction restored shared policy and
+all other skills to the PR base. Exact comparison confirms only this skill's
+README table row and one concise CHANGELOG entry differ outside its folder.
+Repository structural checks, all eleven shared preambles, spec validation,
+JSON parsing, local links, diff whitespace and scoped Markdown checks passed.
+Independent read-only review found no introduced serious defect. The local
+credential workflow differs from generic catalog rules as documented in
+[runtime security](runtime-security.md); higher-priority restrictions still
+apply. Runtime scripts and tests were unchanged, so the prior runtime evidence
+below was retained without rerunning the suite for this correction.
+
 | Evidence | Result |
 | --- | --- |
 | Full deterministic suite | 92 tests passed in 147.559 seconds, including setup, artifacts, actual wrapper subprocesses, HTTP proxy, MCP protocol and renewal/rotation |

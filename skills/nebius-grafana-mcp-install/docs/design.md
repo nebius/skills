@@ -2,7 +2,7 @@
 <!-- maintain-project-specs:design:start schema=maintain-project-specs/design-v2 -->
 # Project Design
 
-<!-- FEATURE: FEAT-001 reqs=REQ-001 status=ready delivery=verified priority=P0 version=11 -->
+<!-- FEATURE: FEAT-001 reqs=REQ-001 status=ready delivery=verified priority=P0 version=12 -->
 ### FEAT-001: Agent-run setup and supervised credential proxy
 
 #### Requirements Covered
@@ -11,7 +11,7 @@
 
 #### Context Evidence
 
-The prior implementation used a human terminal handoff and passed 70 synthetic tests. Review identified an advertised datasource health tool whose exact upstream route was blocked by the proxy. Existing shared policy also prohibited this installer workflow. The accepted revision changes those contracts, leaves CI unchanged and permits browser sign-in and client reload only when necessary.
+The installer supports agent-run setup and exact datasource health reads. Its helper-owned authentication and private credential storage differ from the catalog's generic human-run credential rules. Document that bounded workflow only in this skill; restore shared policy and other skills to the PR base. Browser sign-in and client reload remain user steps only when necessary.
 
 #### Design Details
 
@@ -31,7 +31,7 @@ Retain existing protected token files, immutable origin/identity binding, frozen
 
 #### Selected Option
 
-Agent-run deterministic installer under a narrow canonical policy exception, exact health-route support and separate installation/runtime/activation results.
+Agent-run deterministic installer with a skill-specific credential boundary, exact health-route support and separate installation/runtime/activation results. Keep the generated catalog preamble unchanged and explain the helper's limited exception in this skill's own invocation instructions. Host and organization restrictions remain authoritative.
 
 #### Alternatives Considered
 
@@ -39,7 +39,7 @@ The manual terminal handoff does not meet the requested experience. Hiding datas
 
 #### Implementation Boundaries
 
-Change the skill, relevant root docs/policy and generated preambles. Preserve CI, root evals, plugin manifests, donor source and actual installed client/auth state. Existing prerequisites are checked, not installed. PR 8 remains Draft until separately requested otherwise.
+Confine changes to this skill folder, its root README table row and one concise CHANGELOG entry. Restore shared/preamble.md, SECURITY.md, CONTRIBUTING.md and every other skill to the PR base. Preserve all other root documentation, CI, root evals, plugin manifests, donor source and actual installed client/auth state. This skill's generated block stays identical to the shared preamble; local invocation and credential instructions sit outside it. Existing prerequisites are checked, not installed. PR 8 remains Draft until separately requested otherwise.
 
 #### Test-First Success Criteria
 
@@ -49,7 +49,7 @@ Change the skill, relevant root docs/policy and generated preambles. Preserve CI
 
 #### Validation Plan
 
-Run scoped Python/Bash checks, full skill-local suite, root structural validation, read-only risk review and align. Do not add CI jobs or claim source tests establish live activation.
+For runtime changes, run scoped Python/Bash checks and the full skill-local suite. For this documentation-only scope correction, verify exact equality of restored files to the PR base, only the allowed README/changelog additions, shared-preamble synchronization, local links/JSON, spec validation, repository structural validation, read-only risk review and align. Do not add CI jobs or claim source tests establish live activation.
 
 #### Test Plan
 
@@ -65,15 +65,17 @@ Return PR 8 to Draft, update the current branch and retain immutable runtime bun
 
 #### Done Definition
 
-The approved source and policy changes pass focused verification and alignment. The final report states PR draft state and distinguishes local/source proof from any unperformed live/browser/current-client activation checks.
+The installer and skill-specific instructions pass focused verification and alignment. The complete diff outside the skill contains only its README table row and concise CHANGELOG entry. The final report distinguishes local/source proof from any unperformed live/browser/current-client activation checks.
 
 #### Implementation Evidence
 
-Implemented agent-run bundled setup with owned selector reuse, sanitized progress/results, automatic Claude settings, private MCP readiness and exact datasource health forwarding. Updated the canonical shared policy, generated preambles, README/changelog and local behavior scenarios. Added tests for input reuse, configuration drift, browser-mode authentication, protocol failures and process cleanup. CI, root evals, plugin manifests and installed/live state are unchanged.
+Implemented agent-run bundled setup with owned selector reuse, sanitized progress/results, automatic Claude settings, private MCP readiness and exact datasource health forwarding. Tests cover input reuse, configuration drift, browser-mode authentication, protocol failures and process cleanup. Restored shared/root policy and other skills to the PR base, retained only the allowed catalog rows, and localized the installer instructions and evidence without changing runtime code. The skill explicitly documents its credential-workflow deviation from generic catalog rules and respects higher-priority restrictions.
 
 #### Verification Evidence
 
 Revision verification: the full 92-test synthetic suite passed in 147.559 seconds, including strengthened paused-wrapper cleanup and malformed-binding regressions. Both actual native client CLIs passed registration, repeat apply, owned reuse, local check and synthetic runtime verification in temporary homes. Root validation, Ruff, ShellCheck, syntax/JSON and diff checks passed; Markdown has no introduced diagnostics relative to the baseline with documented style exclusions. Independent code/security review reproduced and verified repairs for origin selection and stopped-wrapper cleanup. The subsequent explicit alignment review found no additional code or security defects. Live authentication/Grafana access, Linux execution, live renewal, fresh model invocation and current-client activation are not claimed. See references/validation.md for evidence boundaries.
+
+Scope-correction verification: exact comparison with the PR base confirms that only one README table row and one concise CHANGELOG entry differ outside this skill. All eleven generated preambles synchronize with the unchanged source. Repository structural validation, spec validation, JSON parsing, local link checks, diff whitespace and scoped Markdown checks passed. Independent read-only review found no introduced serious defect; the documented difference from generic catalog credential rules remains. Runtime scripts and tests match the previously validated revision, so the runtime suite was not repeated for this documentation-only correction.
 
 <!-- /FEATURE: FEAT-001 -->
 <!-- maintain-project-specs:design:end -->

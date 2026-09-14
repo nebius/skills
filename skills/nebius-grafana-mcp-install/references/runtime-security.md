@@ -58,14 +58,21 @@ The same OS user can inspect process environments or private files. This design
 protects supported workflow output and credential routing, not against a hostile
 agent with unrestricted access to the user's operating-system account.
 
-## Repository policy and agent output
+## Skill-specific credential workflow and agent output
 
-The shared preamble and SECURITY.md define a narrow exception for this bundled
-installer and its fixed supervised renewal. The agent can invoke setup after an
-explicit installation/update request, but cannot run credential commands
-directly, read private token files, reproduce the credential workflow or bypass
-native permissions. Protected persistence is limited to this runtime's state.
-No broad Python, Bash or credential prefix is added to allowed-tools.
+The shared preamble and root security policy retain the catalog's generic
+human-run credential rules. This skill documents its own bounded deviation:
+after an explicit install/update request, the agent invokes only the bundled
+setup helper, which captures credentials privately; its fixed supervised
+runtime may renew the same pinned human identity. Protected persistence is
+limited to this runtime's mode-0600 state. This is not a repository-wide policy
+exception and grants no authority to other skills or arbitrary helpers.
+
+The agent must not run credential commands directly, read private token files,
+reproduce the workflow, grant IAM access or bypass native permissions. No broad
+Python, Bash or credential prefix is added to allowed-tools. If a higher-priority
+host, workspace or organization policy forbids the helper workflow, report the
+blocker; this skill cannot override it. See [Invocation Policy](../SKILL.md#invocation-policy).
 
 Setup captures all CLI and readiness output internally. Progress and final JSON
 contain fixed stages, statuses, the validated server name and sanitized
@@ -73,7 +80,7 @@ remediation messages. The Nebius token is never placed in agent-visible tool
 results, prompts, chat, logs or documentation by the supported workflow. This is a scoped privacy property,
 not an unconditional safety guarantee or an OS isolation boundary.
 
-The runtime requires Python/Bash and stock Grafana MCP. Root documentation
+The runtime requires Python/Bash and stock Grafana MCP. This skill's README
 states these extra prerequisites. Skill-local tests and behavior definitions
 remain outside root CI by scope decision. Source tests, isolated native-client
 checks, live Grafana access and current-chat activation are separate evidence.

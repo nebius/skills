@@ -6,7 +6,7 @@
   "expected_behavior": [
     "Select the explicit client, human profile and trusted HTTPS origin.",
     "Run credential-free check, then execute bundled apply; use update when owned repair requires it.",
-    "Explain private helper-owned credential handling under the narrow shared-policy exception; never expose tokens or bypass native permissions.",
+    "Explain this skill's private helper-owned credential workflow without claiming a shared-policy exception; never expose tokens or bypass host, workspace or organization restrictions.",
     "Distinguish installing this skill, local setup and live readiness.",
     "Ask once for missing non-secret selectors and reuse only a unique validated owned binding.",
     "Separate registration, helper runtime verification and observed current-chat activation; request reload only when the host requires it.",

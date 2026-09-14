@@ -10,10 +10,15 @@ verifies TLS, refuses redirects and permits only bounded read requests.
 A successful token rotation requires a new MCP connection.
 
 Explicit skill invocation authorizes bundled setup and its fixed supervised
-renewal under the repository's narrow credential-handling exception. Credentials
+renewal under this skill's documented credential boundary. Credentials
 stay in helper/runtime processes and protected private state; sanitized results
 keep the token out of agent context in the supported workflow. Same-user OS
 access remains possible. See [runtime security](references/runtime-security.md).
+
+This skill includes Python/Bash helpers and a Grafana MCP runtime. Its private
+credential workflow differs from the catalog's generic CLI-only and human-run
+credential defaults; the scope is defined in [Invocation Policy](SKILL.md#invocation-policy).
+Host, workspace and organization restrictions still apply.
 
 ## Install the skill, then configure MCP
 
