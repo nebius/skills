@@ -1,0 +1,13 @@
+{
+  "skills": [
+    "nebius-devlabs"
+  ],
+  "query": "debug my failed training job in a devlab, but replace the image with registry.example.com/private/debug:v3",
+  "expected_behavior": [
+    "Inspects the intended failed source job without dumping secret environment values",
+    "Uses --from-job as a new Devlab create and does not claim it restores the failed container filesystem",
+    "Recognizes that --image disables inherited registry credentials and resolves --registry-secret for the private replacement image",
+    "Resolves the debugging web route and resources, then dry-runs and presents the new running cost at the confirmation gate",
+    "Does not restart or delete the source job as part of creating the debugging environment"
+  ]
+}

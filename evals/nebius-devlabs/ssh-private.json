@@ -1,0 +1,12 @@
+{
+  "skills": [
+    "nebius-devlabs"
+  ],
+  "query": "show me how to ssh to my existing devlab over our private network using ~/.ssh/lab_key",
+  "expected_behavior": [
+    "Reads the existing Devlab state and checks the private connection path instead of creating another environment",
+    "Provides devlab ssh with the positional Devlab ID, --private, and --identity-file ~/.ssh/lab_key",
+    "Does not read or print the private key or put SSH into a read-only allowlist",
+    "Does not launch an interactive SSH command in a non-interactive tool or add public exposure as a workaround"
+  ]
+}

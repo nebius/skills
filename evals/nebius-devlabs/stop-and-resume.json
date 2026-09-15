@@ -1,0 +1,13 @@
+{
+  "skills": [
+    "nebius-devlabs"
+  ],
+  "query": "stop my notebook devlab for the weekend; i want to keep the code and resume it monday",
+  "expected_behavior": [
+    "Gets the intended Devlab and reports session interruption before the Tier B stop gate",
+    "Uses devlab stop and verifies operation completion and resource state; does not delete it",
+    "Identifies the persistent workspace and avoids promising zero retained-storage cost or backup guarantees",
+    "Explains that resume uses devlab restart rather than start, with renewed running cost",
+    "Does not immediately restart the environment or schedule a future restart without resolving that separate intent"
+  ]
+}

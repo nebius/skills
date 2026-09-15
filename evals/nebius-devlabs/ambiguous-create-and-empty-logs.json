@@ -1,0 +1,13 @@
+{
+  "skills": [
+    "nebius-devlabs"
+  ],
+  "query": "the devlab create timed out and logs are empty; just run it again",
+  "expected_behavior": [
+    "Checks the operation and resource by ID or project-scoped name before considering another mutation",
+    "Does not replay create on an ambiguous timeout or create a duplicate while an existing resource is provisioning",
+    "Inspects resource state details and bounded logs without --follow",
+    "Does not equate empty logs with a healthy UI or a proven image-pull failure",
+    "Reports unresolved state and running cost exposure; does not transplant job cancel/recreate recovery into Devlabs"
+  ]
+}
