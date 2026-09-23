@@ -2,7 +2,7 @@
 name: nebius-serverless-jobs
 description: Run containerized GPU/CPU batch jobs on Nebius Serverless. Use for "run this container on an H100", "launch a training job", "run my script on a GPU", "why is my job stuck", "cancel that job" - any ai job create, monitor, cancel, or re-run.
 license: Apache-2.0
-compatibility: Requires the nebius CLI (>=0.12.265) with a configured profile; jq recommended
+compatibility: Requires the nebius CLI (>=0.12.277) with a configured profile; jq recommended
 metadata:
   version: "0.1.0"
 allowed-tools:
@@ -14,6 +14,9 @@ allowed-tools:
   - Bash(nebius ai job get-by-name:*)
   - Bash(nebius ai job logs:*)
   - Bash(nebius compute platform list:*)
+  - Bash(nebius billing pricing-policy list:*)
+  - Bash(nebius billing pricing-policy get:*)
+  - Bash(nebius billing pricing-policy get-by-name:*)
 ---
 
 # Nebius Serverless Jobs (gated)
@@ -38,7 +41,7 @@ nebius config get parent-id    # project-...
 nebius config get tenant-id    # tenant-...
 ```
 
-These skills require CLI `0.12.247` or newer; an individual skill may state a higher floor (the Serverless skills need `0.12.265`) — the stricter number wins. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
+These skills require CLI `0.12.247` or newer; an individual skill may state a higher floor (the Serverless skills need `0.12.277`) — the stricter number wins. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
 
 If any check fails or an ID comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and the shown federation-profile command opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call, and re-auth is the same human task.
 
@@ -69,7 +72,7 @@ Compute resources are generally **project**-scoped; public-image discovery is re
 **Secrets.** Never print or persist tokens, access keys, or the contents of `~/.nebius/credentials.json`.
 <!-- END SHARED PREAMBLE -->
 
-**Serverless tier additions:** `cancel` and `restart` are Tier B (gated). `job delete` removes the record *and* its logs — Tier C, print it for the human. The Serverless commands need CLI **>= 0.12.265**; if `nebius version` is older, ask the user to run `nebius update` first (print it — never run it yourself).
+**Serverless tier additions:** `cancel` and `restart` are Tier B (gated). `job delete` removes the record *and* its logs — Tier C, print it for the human. The Serverless commands need CLI **>= 0.12.277**; if `nebius version` is older, ask the user to run `nebius update` first (print it — never run it yourself).
 
 ## Choosing platform and preset
 
@@ -86,6 +89,16 @@ There is no `--gpu 1xH100` shorthand yet (MSPDEV-775) — you pick a `--platform
 Availability differs per region (RTX 6000-class platforms exist only in some) — ground truth is `nebius compute platform list --parent-id <project-id> --format json --all` in the target project; the full verified table lives in [references/platform-presets.md](references/platform-presets.md). Unknown platform/preset strings fail validation — that's what `--dry-run` is for.
 
 **Validate cheap, run expensive.** First run of an untested image → `cpu-d3` (or the smallest GPU preset if CUDA is required). `--preemptible` is markedly cheaper but the VM can be stopped at any time — pair it with `--restart-policy on-failure` only if the workload checkpoints; default `never` otherwise.
+
+## Preemptible pricing model (dynamic pricing)
+
+With `--preemptible` you also choose how you pay — exactly one of three mutually-exclusive flags (GPU platforms only). **As of 2026-10-08 a pricing model is mandatory with `--preemptible`** — a bare `--preemptible` no longer defaults silently.
+
+- `--follows-spot-price` — accept the current spot price, **no cap**. Cost floats with the market; the VM is preempted only on capacity, not price.
+- `--spot-pricing-policy-id <id>` — cap at a pricing policy's max bid. If the market rises above the bid the VM is **preempted rather than billed higher**.
+- `--on-demand` — explicit regular VM (this is the default when `--preemptible` is absent); cannot be combined with `--preemptible`.
+
+State which model you're using and its cost implication in the create confirmation, exactly like the preset — get the actual hourly number from the billing calculator (`nebius-billing`) rather than guessing. To use a capped bid, get an existing policy id with `nebius billing pricing-policy list --parent-id <project-id> --format json` (its platform must match `--platform`); creating or changing a policy is a billing task — see `nebius-billing`.
 
 ## Command and args (verified footgun)
 
