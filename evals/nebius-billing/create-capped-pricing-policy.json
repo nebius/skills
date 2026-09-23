@@ -1,0 +1,11 @@
+{
+  "skills": ["nebius-billing"],
+  "query": "set up a pricing policy so my preemptible h100 jobs never pay more than 3.50 per gpu hour",
+  "expected_behavior": [
+    "Uses nebius billing pricing-policy create with --compute-instance-spec-v1-platform gpu-h100-sxm and --pricing-max-price-v1-max-price 3.500 (per-GPU hourly USD, decimal string)",
+    "Treats create as Tier B: prints the resolved command, states the bid and what it caps, waits for explicit confirmation, runs once",
+    "Warns that a bid below the current spot price is accepted but starts SCHEDULING_STATE_BLOCKED and backs no VM until the market drops",
+    "Notes the policy is per-platform (this one caps gpu-h100-sxm only) and that it is used at launch via --spot-pricing-policy-id",
+    "Points to nebius-serverless-jobs/-endpoints for the actual gated launch"
+  ]
+}
