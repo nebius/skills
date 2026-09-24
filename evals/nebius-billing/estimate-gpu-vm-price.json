@@ -1,0 +1,11 @@
+{
+  "skills": ["nebius-billing"],
+  "query": "how much does an RTX 6000 VM cost per hour in my uk-south2 project, plus a 1 TB SSD?",
+  "expected_behavior": [
+    "Uses nebius billing v1alpha1 calculator (a Tier A read that creates nothing), not a guess or the public web price",
+    "Prices the VM with --resource-spec-compute-instance-spec-resources-platform / -resources-preset and the parent-id of the uk-south2 project (region derives from the project)",
+    "Prices the disk with --resource-spec-compute-disk-spec-type network_ssd and -size-gibibytes 1024, or batches both via estimate-batch --resource-specs",
+    "Reports hourly_cost and monthly_cost from the output",
+    "Notes this is the on-demand/list ceiling and that a preemptible VM bills at the live spot price (lower), not quoted by the calculator"
+  ]
+}
