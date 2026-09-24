@@ -1,0 +1,11 @@
+{
+  "skills": [
+    "nebius-public-docs"
+  ],
+  "query": "I only installed the public docs skill and do not have a Nebius account or CLI. How do Nebius VM maintenance windows work?",
+  "expected_behavior": [
+    "Answers using public documentation and specific source links.",
+    "Does not require CLI installation, authentication, a profile, or another skill.",
+    "Distinguishes documented maintenance behavior from the state of a particular VM."
+  ]
+}

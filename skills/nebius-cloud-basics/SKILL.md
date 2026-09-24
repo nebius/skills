@@ -1,6 +1,6 @@
 ---
 name: nebius-cloud-basics
-description: Foundation for the nebius CLI. Check before any other Nebius task, or if the CLI is not installed or configured, or a nebius command needs the right profile, --parent-id, or output format, or fails with an unclear error.
+description: Foundation for the nebius CLI. Check before running Nebius CLI commands, or if the CLI is not installed or configured, or a nebius command needs the right profile, --parent-id, or output format, or fails with an unclear error. Public documentation questions do not require CLI setup.
 license: Apache-2.0
 compatibility: Requires the nebius CLI (>=0.12.247) with a configured profile; jq recommended
 metadata:

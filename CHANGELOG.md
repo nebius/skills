@@ -4,6 +4,8 @@ All notable changes to this repository. Versioning is repo-wide semver; the plug
 
 ## 0.1.0 — Phase 1 (unreleased)
 
+- Skill `nebius-public-docs`: public documentation research with citations, targeted Markdown retrieval, and optional operational handoffs; no Nebius account or CLI required. Added documentation-only preamble handling and narrowed CLI setup routing.
+
 - Framework: root-as-plugin layout serving Claude Code, Codex, and `npx skills` from one tree; shared preamble stamped by `scripts/sync-shared.py`; validation via `scripts/validate.sh` (skills-ref, claude plugin validate, frontmatter/portability lint); CI workflow.
 - Skills: `nebius-cloud-basics`, `nebius-compute-inventory`, `nebius-capacity-quotas`, `nebius-compute-provision`.
 - Skills (Serverless, CLI ≥ 0.12.265): `nebius-serverless-setup`, `nebius-serverless-jobs`, `nebius-serverless-endpoints`, `nebius-serverless-data-secrets`, `nebius-serverless-troubleshooting` — deterministic `ai job`/`ai endpoint` flows with dry-run → cost → confirm → verify, encoding live-verified CLI footguns tagged with their tickets (MSPDEV-323/347/775/778/784) for removal when fixed.

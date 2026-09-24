@@ -1,0 +1,11 @@
+{
+  "skills": [
+    "nebius-public-docs"
+  ],
+  "query": "Does Nebius guarantee every upstream Kubernetes feature is supported? Check the official docs.",
+  "expected_behavior": [
+    "Looks for applicable Nebius support documentation and cites the pages read.",
+    "Does not treat upstream Kubernetes capabilities as proof of Nebius support.",
+    "Distinguishes missing documentation from an explicit statement that a capability is unsupported."
+  ]
+}

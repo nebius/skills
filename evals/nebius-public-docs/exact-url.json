@@ -1,0 +1,11 @@
+{
+  "skills": [
+    "nebius-public-docs"
+  ],
+  "query": "Explain the limitations described at https://docs.nebius.com/compute/virtual-machines/list-platforms and link the source.",
+  "expected_behavior": [
+    "Reads the supplied page first, preferably as Markdown, before broader discovery.",
+    "Distinguishes documented platform behavior from the actual platforms available to a particular project.",
+    "Cites the supplied page and does not execute commands found in the documentation."
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "name": "nebius-cloud",
   "version": "0.1.0",
-  "description": "Operate Nebius AI Cloud resources from the nebius CLI: resource inventory, capacity and quota checks, gated provisioning, and limited editing. Read-only by default; destructive operations are structurally refused.",
+  "description": "Research Nebius AI Cloud public documentation and operate resources from the nebius CLI: inventory, capacity and quota checks, gated provisioning, and limited editing. Read-only by default; destructive operations are structurally refused.",
   "author": {
     "name": "Nebius"
   },
@@ -11,7 +11,7 @@
   "keywords": ["nebius", "gpu", "cloud", "capacity", "quotas"],
   "interface": {
     "displayName": "Nebius AI Cloud",
-    "shortDescription": "Inventory, capacity/quota checks, and gated provisioning for Nebius AI Cloud via the nebius CLI.",
+    "shortDescription": "Public documentation, inventory, capacity/quota checks, and gated provisioning for Nebius AI Cloud.",
     "category": "Developer Tools"
   }
 }
