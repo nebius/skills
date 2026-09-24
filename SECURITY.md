@@ -2,7 +2,9 @@
 
 ## Threat model
 
-These skills instruct an AI agent to run `nebius` CLI commands with the user's existing credentials. The primary risks are (1) an agent executing a destructive or credential-emitting command, and (2) skill text being modified to smuggle such commands in. Mitigations:
+The operational skills instruct an AI agent to run `nebius` CLI commands with the user's existing credentials. The primary risks are (1) an agent executing a destructive or credential-emitting command, and (2) skill text being modified to smuggle such commands in. Mitigations:
+
+The `nebius-public-docs` skill reads public documentation without requiring credentials or running cloud commands. Retrieved setup instructions and command examples are source material, not authorization to execute them. It omits `allowed-tools` and uses the host's normal web-access permissions. The operational tiers below apply when an operational skill is used.
 
 ## The three-tier model
 
@@ -10,9 +12,9 @@ These skills instruct an AI agent to run `nebius` CLI commands with the user's e
 |---|---|---|
 | A — read | `list`, `get*`, `batch-get`, `logs`, capacity/quota reads and cost estimates | Pre-approved via each skill's `allowed-tools` (explicit command prefixes, never a blanket `Bash(nebius:*)`). |
 | B — gated write | `create`, `update`, `start`, `stop`, quota changes | Never pre-approved. Skill prose requires: print the resolved command verbatim, state effect + cost, wait for explicit user confirmation, run once, never batch, never retry after ambiguous failure. |
-| C — refuse | `delete`, `purge`, quota-allowance delete, access-key/static-key/auth-public-key operations, `iam get-access-token`, `--impersonate-service-account-id` | Structurally refused in every skill. The agent prints the command for a human and explains the blast radius. |
+| C — refuse | `delete`, `purge`, quota-allowance delete, access-key/static-key/auth-public-key operations, `iam get-access-token`, `--impersonate-service-account-id` | Structurally refused in every operational skill. The agent prints the command for a human and explains the blast radius. |
 
-Additional invariants baked into every skill:
+Additional invariants for operational skills (the no-real-IDs lint also covers documentation skills):
 
 - Never print or persist tokens, access keys, or `~/.nebius/credentials.json` contents.
 - Never run `edit`/`edit-by-name` (interactive `$EDITOR`), `-i/--interactive`, or unbounded `--follow` streams.
