@@ -125,7 +125,7 @@ Add `--runner pooling` (vLLM ≥ 0.14; older builds used `--task embed`), plus `
 - `--spot-pricing-policy-id <id>` — cap at a pricing policy's max bid; if the market rises above it the VM is **preempted rather than billed higher**. Get an existing id with `nebius billing pricing-policy list --parent-id <project-id> --format json` (its platform must match `--platform`); creating or changing a policy is a billing task — see `nebius-billing`.
 - `--on-demand` — explicit regular VM (the default when `--preemptible` is absent); cannot be combined with `--preemptible`.
 
-**Caution:** an endpoint is a long-lived service, so a preemptible one can be reclaimed at any time → it goes `STOPPED` with no auto-restart (recover with `nebius ai endpoint start <id>`, gated). Use it only for serving that tolerates sudden interruption; keep anything user-facing on-demand. State the pricing model and its idle-cost implication in the deploy confirmation — get the hourly number from the billing calculator (`nebius-billing`) rather than guessing.
+**Caution:** an endpoint is a long-lived service, so a preemptible one can be reclaimed at any time → it goes `STOPPED` with no auto-restart (recover with `nebius ai endpoint start <id>`, gated). Use it only for serving that tolerates sudden interruption; keep anything user-facing on-demand. State the pricing model and its idle-cost implication in the deploy confirmation — for cost, the calculator (`nebius-billing`) gives the on-demand rate, an **upper bound**; preemptible bills at the live spot price (lower, not quoted), and `--spot-pricing-policy-id` caps at the bid, not the charge.
 
 ## The deploy workflow (follow in order, no skipping)
 

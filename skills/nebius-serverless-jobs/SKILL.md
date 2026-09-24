@@ -98,7 +98,7 @@ With `--preemptible` you also choose how you pay — exactly one of three mutual
 - `--spot-pricing-policy-id <id>` — cap at a pricing policy's max bid. If the market rises above the bid the VM is **preempted rather than billed higher**.
 - `--on-demand` — explicit regular VM (this is the default when `--preemptible` is absent); cannot be combined with `--preemptible`.
 
-State which model you're using and its cost implication in the create confirmation, exactly like the preset — get the actual hourly number from the billing calculator (`nebius-billing`) rather than guessing. To use a capped bid, get an existing policy id with `nebius billing pricing-policy list --parent-id <project-id> --format json` (its platform must match `--platform`); creating or changing a policy is a billing task — see `nebius-billing`.
+State which model you're using and its cost implication in the create confirmation, exactly like the preset — for cost, the calculator (`nebius-billing`) gives the on-demand rate, an **upper bound** for preemptible (billed at the lower, unquoted spot price); a policy caps at its bid, not the charge. To use a capped bid, get an existing policy id with `nebius billing pricing-policy list --parent-id <project-id> --format json` (its platform must match `--platform`); creating or changing a policy is a billing task — see `nebius-billing`.
 
 ## Command and args (verified footgun)
 
