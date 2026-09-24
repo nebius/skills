@@ -1,0 +1,11 @@
+{
+  "skills": ["nebius-billing"],
+  "query": "I made a pricing policy but my preemptible job still won't start on it — why?",
+  "expected_behavior": [
+    "Reads the policy with nebius billing pricing-policy get and checks status.scheduling_state",
+    "Explains SCHEDULING_STATE_BLOCKED = the bid is below the current spot price, so it backs nothing until the market drops or the bid is raised",
+    "Offers to raise the bid via pricing-policy update --pricing-max-price-v1-max-price (Tier B, gated), noting the bid can only change while no VM runs under the policy (else FAILED_PRECONDITION)",
+    "Confirms the policy's platform matches the job's --platform (a policy caps exactly one platform)",
+    "Does not run delete or edit/edit-by-name"
+  ]
+}

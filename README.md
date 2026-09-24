@@ -1,8 +1,8 @@
 # Nebius Agent Skills
 
-Portable, pure-text agent skills for operating **Nebius AI Cloud** with the `nebius` CLI. One repo serves three channels: a Claude Code plugin marketplace, a Codex plugin marketplace, and a plain `skills/` tree for `npx skills`.
+Portable, pure-text agent skills for researching **Nebius AI Cloud** documentation and operating cloud resources with the `nebius` CLI. One repo serves three channels: a Claude Code plugin marketplace, a Codex plugin marketplace, and a plain `skills/` tree for `npx skills`.
 
-No server, no runtime dependency beyond the `nebius` CLI you already have.
+No bundled server. Documentation research needs web access; operational skills use the `nebius` CLI.
 
 > **Status: Phase 1 (private).** Not published anywhere until nebius org approval — see the project plan. Until the repo is public, replace `nebius/skills` in the commands below with a local checkout path or private URL.
 
@@ -10,6 +10,7 @@ No server, no runtime dependency beyond the `nebius` CLI you already have.
 
 | Skill | What it does |
 |---|---|
+| [nebius-public-docs](skills/nebius-public-docs/SKILL.md) | Public documentation research: capabilities, configuration, supported versions, and documented limits with citations; no account or CLI required |
 | [nebius-cloud-basics](skills/nebius-cloud-basics/SKILL.md) | Foundation: profiles, `--parent-id`/tenant resolution, JSON output, paging, async operations, safety tiers |
 | [nebius-compute-inventory](skills/nebius-compute-inventory/SKILL.md) | Read-only inventory: instances, disks, filesystems, GPU clusters, images, platforms |
 | [nebius-capacity-quotas](skills/nebius-capacity-quotas/SKILL.md) | "Can I launch 8×B200?" — capacity advice (tenant-scoped), reservations, quota allowances |
@@ -21,12 +22,15 @@ No server, no runtime dependency beyond the `nebius` CLI you already have.
 | [nebius-serverless-troubleshooting](skills/nebius-serverless-troubleshooting/SKILL.md) | Job/endpoint diagnosis: states, bounded logs, error catalog with recovery actions |
 | [nebius-serverless-recipes](skills/nebius-serverless-recipes/SKILL.md) | End-to-end playbooks: 1-GPU/multi-GPU training, vLLM serving, batch fan-out, checkpointed & preemptible fine-tuning, GitHub Actions CI |
 | [nebius-devlabs](skills/nebius-devlabs/SKILL.md) | Interactive GPU/CPU development environments: templates, workspaces, web/SSH access, failed-job debugging, gated stop/restart |
+| [nebius-billing](skills/nebius-billing/SKILL.md) | Price estimates (calculator: hourly/monthly for VMs, disks, filesystems) and pricing policies for preemptible (spot) VMs — cap the max spot price, the id behind `--spot-pricing-policy-id` |
 
 Nebius **Token Factory** (inference / fine-tuning) is intentionally out of scope — it has a separate API and keys. See [Arindam200/nebius-skills](https://github.com/Arindam200/nebius-skills) for that lifecycle.
 
 ## Safety model
 
-Every skill ships the same three-tier model, in prose **and** in `allowed-tools`:
+CLI skills ship the same three-tier model, in prose **and** in `allowed-tools`. The documentation skill reads public sources without running cloud commands or accessing credentials.
+
+For CLI skills:
 
 - **Tier A — read**: `list`/`get`/`get-by-name`/… run freely (pre-approved via `allowed-tools`).
 - **Tier B — gated write**: `create`/`update`/`start`/`stop` — the agent prints the exact command, states effect and cost, and waits for explicit confirmation. Never pre-approved.
@@ -47,7 +51,7 @@ Reporting problems:
 
 ## Install
 
-Prerequisite everywhere: `nebius` CLI ≥ 0.12.247 with a configured profile ([docs](https://docs.nebius.com/cli)). The `nebius-serverless-*` skills need ≥ 0.12.265 (`--dry-run`, `iam auth-public-key generate`) — `nebius update` gets you there.
+The documentation skill requires only web access. Operational skills require: `nebius` CLI ≥ 0.12.247 with a configured profile ([docs](https://docs.nebius.com/cli)). The `nebius-serverless-*` skills need ≥ 0.12.265 (`--dry-run`, `iam auth-public-key generate`) — `nebius update` gets you there.
 
 The `nebius-devlabs` skill uses CLI ≥ 0.12.277 as its verified compatibility floor.
 
@@ -108,7 +112,7 @@ To roll the plugin out to a whole team, add it to a shared or managed `settings.
 .codex-plugin/       Codex plugin manifest
 evals/               ≥3 scenarios per skill
 scripts/             sync + validation tooling
-shared/preamble.md   shared block stamped into every SKILL.md (scripts/sync-shared.py)
+shared/preamble.md   CLI ground rules stamped into operational skills (scripts/sync-shared.py)
 skills/              canonical skill payload — spec-conformant, vendor-neutral
 ```
 
@@ -116,7 +120,7 @@ skills/              canonical skill payload — spec-conformant, vendor-neutral
 
 ```bash
 bash scripts/validate.sh          # everything CI runs
-python3 scripts/sync-shared.py    # re-stamp shared/preamble.md into all skills
+python3 scripts/sync-shared.py    # re-stamp shared/preamble.md into CLI skills
 ```
 
 Authoring conventions live in [CONTRIBUTING.md](CONTRIBUTING.md). Key invariants: frontmatter uses only the six Agent Skills spec keys; descriptions ≤ 600 chars; bodies ≤ 500 lines; no real tenant/project IDs anywhere in the repo.
