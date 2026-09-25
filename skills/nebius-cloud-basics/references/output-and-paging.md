@@ -5,7 +5,7 @@
 `--format` accepts `yaml|json|jsonpath|table|text` on every command.
 
 - **`json`** — the default choice for agents. Parse with jq or a script.
-- **`yaml`** — useful to eyeball a resource's full shape before writing an update spec (`get ... --format yaml`).
+- **`yaml`** — useful to eyeball a resource's full shape before writing an update spec (`get ... --format yaml`) — but not on a resource whose spec carries credentials (see below).
 - **`jsonpath`** — server-side field extraction; pass the expression with `--jsonpath` when supported, but prefer `--format json` piped to jq: jq is easier to debug and its failure modes are visible.
 - **`table` / `text`** — human-facing; never parse these.
 
@@ -25,7 +25,7 @@ nebius compute instance list --parent-id "$PROJECT" --format json --all \
   | jq '[.items[].status.state] | group_by(.) | map({state: .[0], n: length})'
 ```
 
-List responses put resources under `.items[]`; each resource has `metadata` (id, name, parent_id, labels, resource_version), `spec` (desired configuration), and `status` (observed state). Confirm exact field names on the first call — run one `get --format yaml` and read it rather than assuming.
+List responses put resources under `.items[]`; each resource has `metadata` (id, name, parent_id, labels, resource_version), `spec` (desired configuration), and `status` (observed state). Confirm exact field names on the first call — run one `get --format yaml` and read it rather than assuming. **Not on `ai endpoint` or `ai job` resources:** their specs carry the endpoint bearer token at `.spec.auth_token`, plain `--env` values and registry passwords, so a raw dump puts a credential in the transcript. Project those with jq instead, and take the field names from `nebius-serverless-endpoints` / `nebius-serverless-jobs`.
 
 ## Pagination
 
