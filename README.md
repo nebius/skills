@@ -51,7 +51,7 @@ Reporting problems:
 
 ## Install
 
-The documentation skill requires only web access. Operational skills require: `nebius` CLI ≥ 0.12.247 with a configured profile ([docs](https://docs.nebius.com/cli)). The `nebius-serverless-*` skills need ≥ 0.12.265 (`--dry-run`, `iam auth-public-key generate`) — `nebius update` gets you there.
+The documentation skill requires only web access. Operational skills require: `nebius` CLI ≥ 0.12.247 with a configured profile ([docs](https://docs.nebius.com/cli)). The `nebius-serverless-*` skills need ≥ 0.12.277 (`--dry-run`, `iam auth-public-key generate`, and the preemptible dynamic-pricing flags mandatory from 2026-10-08) — `nebius update` gets you there.
 
 The `nebius-devlabs` skill uses CLI ≥ 0.12.277 as its verified compatibility floor.
 

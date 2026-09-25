@@ -2,7 +2,7 @@
 name: nebius-serverless-data-secrets
 description: Data and credentials for Nebius Serverless jobs and endpoints. Use for "mount an s3 bucket", "pass an api key to my container", "pull from a private registry", "inject a config file", "where do my results go" - any volume, env secret, registry auth, or artifact egress question.
 license: Apache-2.0
-compatibility: Requires the nebius CLI (>=0.12.265) with a configured profile; jq recommended
+compatibility: Requires the nebius CLI (>=0.12.277) with a configured profile; jq recommended
 metadata:
   version: "0.1.0"
 allowed-tools:
@@ -35,7 +35,7 @@ nebius config get parent-id    # project-...
 nebius config get tenant-id    # tenant-...
 ```
 
-These skills require CLI `0.12.247` or newer; an individual skill may state a higher floor (the Serverless skills need `0.12.265`) — the stricter number wins. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
+These skills require CLI `0.12.247` or newer; an individual skill may state a higher floor (the Serverless skills need `0.12.277`) — the stricter number wins. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
 
 If any check fails or an ID comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and the shown federation-profile command opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call, and re-auth is the same human task.
 
@@ -66,7 +66,7 @@ Compute resources are generally **project**-scoped; public-image discovery is re
 **Secrets.** Never print or persist tokens, access keys, or the contents of `~/.nebius/credentials.json`. Some Tier A reads carry credential material in their output: on a token-auth endpoint `ai endpoint get`/`get-by-name` return the bearer token at `.spec.auth_token` and `ai endpoint list` returns it for every item it lists, while job and endpoint specs carry plain `--env` values and registry passwords. Never read those raw — project the fields you need, e.g. `| jq '{id: .metadata.id, state: .status.state, urls: .status.public_endpoints}'`, or `| jq '.items[]? | {…}'` on a list (the `?` matters: an empty list can come back as bare `{}`, and `.items[]` on that aborts with "Cannot iterate over null").
 <!-- END SHARED PREAMBLE -->
 
-**Version floor:** these flags need CLI **>= 0.12.265**; if `nebius version` is older, ask the user to run `nebius update` first (print it — never run it yourself).
+**Version floor:** these flags need CLI **>= 0.12.277**; if `nebius version` is older, ask the user to run `nebius update` first (print it — never run it yourself).
 
 ## S3 volumes (the main data path)
 

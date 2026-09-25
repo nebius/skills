@@ -1,4 +1,4 @@
-# Nebius Serverless endpoint — create command skeleton (CLI 0.12.265; `ai endpoint create`
+# Nebius Serverless endpoint — create command skeleton (CLI 0.12.277; `ai endpoint create`
 # is flags-only, there is no -f/--file spec input). Every valid flag is listed below —
 # anything not here is hallucinated; `nebius ai endpoint create --help` is ground truth.
 # Workflow: validate with --dry-run first, state the recurring cost (bills create → delete),
@@ -22,7 +22,10 @@ nebius ai endpoint create \
   # --env KEY=VALUE                               # repeatable
   # --env-secret KEY=SECRET_SELECTOR              # repeatable; MysteryBox — see nebius-serverless-data-secrets
   # --inject-file local.conf:/etc/app/app.conf    # repeatable; container path absolute, read-only, ≤64 KiB
-  # --preemptible                                 # cheaper; platform may stop the VM at any time
+  # --preemptible                                 # cheaper; platform may stop the VM (→ STOPPED, no auto-restart); needs a pricing model, below, as of 2026-10-08
+  # --follows-spot-price                          # with --preemptible: accept current spot price, no cap
+  # --spot-pricing-policy-id <id>                 # with --preemptible: cap at a pricing policy's bid — see nebius-billing
+  # --on-demand                                   # regular VM (the default); mutually exclusive with --preemptible/spot flags
   # --public                                      # raw public IP, independent of managed URLs — almost never what you want
   # --registry-secret <selector>                  # MysteryBox secret with REGISTRY_USERNAME/REGISTRY_PASSWORD keys
   # --registry-username <user>                    # plain-text registry auth — prefer --registry-secret

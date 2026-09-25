@@ -2,7 +2,7 @@
 name: nebius-serverless-recipes
 description: End-to-end playbooks for Nebius Serverless AI. Use for "how do I train on one GPU", "multi-GPU training", "serve a fine-tuned model", "run batch inference in parallel", "fine-tune with checkpoints", "cheap preemptible training", or "run a Nebius job from GitHub Actions" - when the user wants a complete command chain from image to running artifacts, not a single flag.
 license: Apache-2.0
-compatibility: Requires the nebius CLI (>=0.12.265) with a configured profile; jq recommended
+compatibility: Requires the nebius CLI (>=0.12.277) with a configured profile; jq recommended
 metadata:
   version: "0.1.0"
 allowed-tools:
@@ -45,7 +45,7 @@ nebius config get parent-id    # project-...
 nebius config get tenant-id    # tenant-...
 ```
 
-These skills require CLI `0.12.247` or newer; an individual skill may state a higher floor (the Serverless skills need `0.12.265`) — the stricter number wins. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
+These skills require CLI `0.12.247` or newer; an individual skill may state a higher floor (the Serverless skills need `0.12.277`) — the stricter number wins. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
 
 If any check fails or an ID comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and the shown federation-profile command opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call, and re-auth is the same human task.
 
@@ -184,20 +184,20 @@ Training code must resume from the newest checkpoint at startup for the restart 
 
 ## 6. Cost-optimized preemptible training
 
-`--preemptible` gets the spot discount but the VM can be reclaimed at any time — only safe when the job checkpoints frequently (every ~5–15 min of compute) and resumes. Not for tight wall-clock deadlines. Same shape as recipe 5, plus `--preemptible`:
+`--preemptible` gets the spot discount but the VM can be reclaimed at any time — only safe when the job checkpoints frequently (every ~5–15 min of compute) and resumes. Not for tight wall-clock deadlines. With dynamic pricing, `--preemptible` also takes a pricing model: `--follows-spot-price` (uncapped, below) or `--spot-pricing-policy-id <id>` to cap the bid so a price spike preempts rather than overcharges (discover/create policies via `nebius billing pricing-policy` — see `nebius-billing`). Same shape as recipe 5, plus those flags:
 
 ```bash
 nebius ai job create --parent-id <project> --name ft-spot-abc123 \
   --image cr.eu-north1.nebius.cloud/<reg>/ft:v1 \
   --platform gpu-h100-sxm --preset 1gpu-16vcpu-200gb \
-  --timeout 72h --preemptible \
+  --timeout 72h --preemptible --follows-spot-price \
   --restart-policy on-failure --restart-attempts -1 \
   --volume <checkpoint-fs-id>:/ckpts:rw \
   --env CKPT_DIR=/ckpts --env RESUME_FROM_LATEST=true \
   --subnet-id <subnet> --async
 ```
 
-State both the discounted rate and that each preemption loses progress since the last checkpoint.
+State the pricing model (uncapped vs capped bid), that the charge is the live spot price (below the calculator's on-demand rate; with a policy, never above its bid), and that each preemption loses progress since the last checkpoint.
 
 ## 7. Run a job from GitHub Actions (CI)
 

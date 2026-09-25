@@ -2,7 +2,7 @@
 name: nebius-serverless-endpoints
 description: Deploy and manage inference endpoints on Nebius Serverless. Use for "deploy vllm", "serve this model", "expose my container over https", "stop that endpoint", "how much is this endpoint costing" - any ai endpoint create, smoke test, start, stop, or teardown.
 license: Apache-2.0
-compatibility: Requires the nebius CLI (>=0.12.265) with a configured profile; jq recommended
+compatibility: Requires the nebius CLI (>=0.12.277) with a configured profile; jq recommended
 metadata:
   version: "0.1.0"
 allowed-tools:
@@ -14,6 +14,9 @@ allowed-tools:
   - Bash(nebius ai endpoint get-by-name:*)
   - Bash(nebius ai endpoint logs:*)
   - Bash(nebius compute platform list:*)
+  - Bash(nebius billing pricing-policy list:*)
+  - Bash(nebius billing pricing-policy get:*)
+  - Bash(nebius billing pricing-policy get-by-name:*)
 ---
 
 # Nebius Serverless Endpoints (gated)
@@ -38,7 +41,7 @@ nebius config get parent-id    # project-...
 nebius config get tenant-id    # tenant-...
 ```
 
-These skills require CLI `0.12.247` or newer; an individual skill may state a higher floor (the Serverless skills need `0.12.265`) — the stricter number wins. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
+These skills require CLI `0.12.247` or newer; an individual skill may state a higher floor (the Serverless skills need `0.12.277`) — the stricter number wins. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
 
 If any check fails or an ID comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and the shown federation-profile command opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call, and re-auth is the same human task.
 
@@ -69,7 +72,7 @@ Compute resources are generally **project**-scoped; public-image discovery is re
 **Secrets.** Never print or persist tokens, access keys, or the contents of `~/.nebius/credentials.json`. Some Tier A reads carry credential material in their output: on a token-auth endpoint `ai endpoint get`/`get-by-name` return the bearer token at `.spec.auth_token` and `ai endpoint list` returns it for every item it lists, while job and endpoint specs carry plain `--env` values and registry passwords. Never read those raw — project the fields you need, e.g. `| jq '{id: .metadata.id, state: .status.state, urls: .status.public_endpoints}'`, or `| jq '.items[]? | {…}'` on a list (the `?` matters: an empty list can come back as bare `{}`, and `.items[]` on that aborts with "Cannot iterate over null").
 <!-- END SHARED PREAMBLE -->
 
-**Serverless tier additions:** `restart` is Tier B like `start`/`stop`. `endpoint delete` is Tier C — but see *The idle-cost rule*: when an endpoint should die, saying so loudly is part of this skill's job. Commands here need CLI **>= 0.12.265**; if older, ask the user to run `nebius update` first (print it — never run it yourself).
+**Serverless tier additions:** `restart` is Tier B like `start`/`stop`. `endpoint delete` is Tier C — but see *The idle-cost rule*: when an endpoint should die, saying so loudly is part of this skill's job. Commands here need CLI **>= 0.12.277**; if older, ask the user to run `nebius update` first (print it — never run it yourself).
 
 ## The idle-cost rule (read this first)
 
@@ -114,9 +117,19 @@ Right: `--args "--model X --port 8000"`  ·  Wrong: `--args "--model,X,--port,80
 
 Add `--runner pooling` (vLLM ≥ 0.14; older builds used `--task embed`), plus `--trust-remote-code` for models that ship custom code. This exposes `/v1/embeddings`, `/pooling`, `/score`, `/rerank`. Note `/v1/models` may 404 while the model is still loading, then 200 once ready — don't read the transient 404 as a failed deploy; confirm with a real request in the smoke test.
 
+## Preemptible pricing (optional, interruption-tolerant serving only)
+
+`--preemptible` runs the endpoint on a spot VM. With it you choose how you pay — exactly one of three mutually-exclusive flags (GPU platforms only). **As of 2026-10-08 a pricing model is mandatory with `--preemptible`** — a bare `--preemptible` no longer defaults silently.
+
+- `--follows-spot-price` — accept the current spot price, **no cap**; preempted only on capacity, not price.
+- `--spot-pricing-policy-id <id>` — cap at a pricing policy's max bid; if the market rises above it the VM is **preempted rather than billed higher**. Get an existing id with `nebius billing pricing-policy list --parent-id <project-id> --format json` (its platform must match `--platform`); creating or changing a policy is a billing task — see `nebius-billing`.
+- `--on-demand` — explicit regular VM (the default when `--preemptible` is absent); cannot be combined with `--preemptible`.
+
+**Caution:** an endpoint is a long-lived service, so a preemptible one can be reclaimed at any time → it goes `STOPPED` with no auto-restart (recover with `nebius ai endpoint start <id>`, gated). Use it only for serving that tolerates sudden interruption; keep anything user-facing on-demand. State the pricing model and its idle-cost implication in the deploy confirmation — for cost, the calculator (`nebius-billing`) gives the on-demand rate, an **upper bound**; preemptible bills at the live spot price (lower, not quoted), and `--spot-pricing-policy-id` caps at the bid, not the charge.
+
 ## The deploy workflow (follow in order, no skipping)
 
-1. **Requirements.** Image, port(s)+protocol, platform+preset (same catalog and discovery as jobs — see `nebius-serverless-jobs` or `nebius compute platform list`), auth choice, volumes/secrets.
+1. **Requirements.** Image, port(s)+protocol, platform+preset (discover with `nebius compute platform list --parent-id <project-id> --format json` — the authoritative catalog; whatever it returns is what serverless accepts), auth choice, volumes/secrets.
 2. **Idempotency check.** `nebius ai endpoint get-by-name --name <name> --parent-id <project-id> --format json | jq '{id: .metadata.id, state: .status.state, urls: .status.public_endpoints}'` — if it exists, report state and URL instead of double-creating (a duplicate is a second bill). The jq filter is not optional: the raw output carries `.spec.auth_token`.
 3. **Dry-run.**
    ```bash

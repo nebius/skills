@@ -2,7 +2,7 @@
 name: nebius-serverless-troubleshooting
 description: Diagnose Nebius Serverless jobs and endpoints. Use for "my job is stuck", "endpoint returns nothing", "no logs", "PermissionDenied", "RESOURCE_EXHAUSTED", "quota exceeded", "job failed, why" - any status, log, or error investigation.
 license: Apache-2.0
-compatibility: Requires the nebius CLI (>=0.12.265) with a configured profile; jq recommended
+compatibility: Requires the nebius CLI (>=0.12.277) with a configured profile; jq recommended
 metadata:
   version: "0.1.0"
 allowed-tools:
@@ -41,7 +41,7 @@ nebius config get parent-id    # project-...
 nebius config get tenant-id    # tenant-...
 ```
 
-These skills require CLI `0.12.247` or newer; an individual skill may state a higher floor (the Serverless skills need `0.12.265`) — the stricter number wins. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
+These skills require CLI `0.12.247` or newer; an individual skill may state a higher floor (the Serverless skills need `0.12.277`) — the stricter number wins. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
 
 If any check fails or an ID comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and the shown federation-profile command opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call, and re-auth is the same human task.
 
@@ -106,7 +106,7 @@ Errors print as **plain text even with `--format json`** (until MSPDEV-778) — 
 - **`RESOURCE_EXHAUSTED` / "not enough resources"** → the platform is out of capacity in that region. Offer: a different preset size, a sibling platform (L40S, or RTX 6000-class in regions that have it — verify with `nebius compute platform list`), `--preemptible`, or another region/project. Quota increases go through the console (Quotas page) — that's a human step.
 - **Quota errors** arrive **in batches** — one response can carry several violated quota codes. Read them all and address the full set; fixing one and retrying discovers the next the slow way.
 - **Authentication errors** → session or token expired; re-auth is a human step → `nebius-serverless-setup`.
-- **Unknown flag/command** → CLI drift; `nebius <cmd> --help` is ground truth, and the Serverless skills need >= 0.12.265 (ask the user to run `nebius update` — never run it yourself).
+- **Unknown flag/command** → CLI drift; `nebius <cmd> --help` is ground truth, and the Serverless skills need >= 0.12.277 (ask the user to run `nebius update` — never run it yourself).
 
 ## Escalating
 
