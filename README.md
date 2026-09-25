@@ -21,6 +21,7 @@ No bundled server. Documentation research needs web access; operational skills u
 | [nebius-serverless-data-secrets](skills/nebius-serverless-data-secrets/SKILL.md) | S3 volumes, MysteryBox env/registry secrets, injected config files, artifact egress |
 | [nebius-serverless-troubleshooting](skills/nebius-serverless-troubleshooting/SKILL.md) | Job/endpoint diagnosis: states, bounded logs, error catalog with recovery actions |
 | [nebius-serverless-recipes](skills/nebius-serverless-recipes/SKILL.md) | End-to-end playbooks: 1-GPU/multi-GPU training, vLLM serving, batch fan-out, checkpointed & preemptible fine-tuning, GitHub Actions CI |
+| [nebius-devlabs](skills/nebius-devlabs/SKILL.md) | Interactive GPU/CPU development environments: templates, workspaces, web/SSH access, failed-job debugging, gated stop/restart |
 | [nebius-billing](skills/nebius-billing/SKILL.md) | Price estimates (calculator: hourly/monthly for VMs, disks, filesystems) and pricing policies for preemptible (spot) VMs — cap the max spot price, the id behind `--spot-pricing-policy-id` |
 
 Nebius **Token Factory** (inference / fine-tuning) is intentionally out of scope — it has a separate API and keys. See [Arindam200/nebius-skills](https://github.com/Arindam200/nebius-skills) for that lifecycle.
@@ -51,6 +52,8 @@ Reporting problems:
 ## Install
 
 The documentation skill requires only web access. Operational skills require: `nebius` CLI ≥ 0.12.247 with a configured profile ([docs](https://docs.nebius.com/cli)). The `nebius-serverless-*` skills need ≥ 0.12.265 (`--dry-run`, `iam auth-public-key generate`) — `nebius update` gets you there.
+
+The `nebius-devlabs` skill uses CLI ≥ 0.12.277 as its verified compatibility floor.
 
 ### Claude Code
 
