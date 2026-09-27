@@ -70,11 +70,22 @@ See [client setup](references/client-setup.md),
 [runtime security](references/runtime-security.md) for paths, recovery and limits.
 Ordinary queries are a separate task after setup succeeds.
 
-The runtime answers initialization and pinned tool/resource discovery locally,
+The runtime answers initialization and tool/resource discovery locally,
 without waiting for authentication or Grafana metadata. Calls made during
 preparation return a fixed retryable error; no operation is queued or forwarded.
 The real authenticated backend must match the pinned catalog before it accepts
 operations. Preparation is bounded to 240 seconds and never opens a browser.
+
+Client descriptions reflect this runtime's restrictions. The original pinned
+catalog remains unchanged for exact backend verification; a separate in-memory
+copy corrects initialization instructions and tool descriptions. Tool names,
+argument structure, resources and request routing stay unchanged. The API tool
+permits only allowlisted GET routes, such as `/api/datasources`, rather than
+arbitrary Grafana APIs. Leave custom headers unset. Loki queries support Loki
+only, with a default of 10 and maximum of 20 log entries. Prometheus tools require
+verified Prometheus HTTP routes; Cloud Monitoring and the dedicated
+VictoriaMetrics plugin query route are unsupported. VictoriaMetrics behind a
+Prometheus-compatible datasource can still work.
 
 The one-hour freshness limit applies when loading a credential. Crossing that
 boundary after loading does not end the connection; its watchdog retains the

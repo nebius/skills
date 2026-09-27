@@ -47,6 +47,15 @@ The latter is explicit because upstream discovery can send MCP availability
 DELETE probes independently of the selected categories. Tempo uses fixed GET
 search/tag/trace paths instead of proxied tool discovery.
 
+Client discovery uses a deep copy of the pinned metadata with explicit text-only
+corrections for these limits. Initialization instructions and tool/parameter
+descriptions are projected; names, schema structure, capabilities and resource identities
+are preserved. Backend initialization and discovery are compared against the
+original pinned metadata, including original descriptions. A backend mismatch
+cannot be hidden by the client projection. The projection neither authorizes
+requests nor changes the proxy allowlist. Unsupported APIs and plugin routes
+continue to fail locally; custom upstream headers must be left unset.
+
 Upstream JSON and complete MCP frames are checked for the active Nebius/local
 credential, including decoded JSON strings. Malformed, oversized or reflecting
 output is withheld. Raw MCP stderr, HTTP logs, exceptions and CLI diagnostics do

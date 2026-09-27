@@ -1,5 +1,6 @@
 """Local MCP discovery and a bounded handoff to the authenticated backend."""
 
+import copy
 import json
 import os
 import selectors
@@ -15,6 +16,144 @@ PREPARING = {"code": -32001, "message": "MCP runtime is preparing; retry shortly
 DISCOVERY = {"tools/list": ("tools", "name"), "resources/list": ("resources", "uri"),
              "resources/templates/list": ("resourceTemplates", "uriTemplate")}
 MAX_PENDING = 64
+
+# Client guidance describes this wrapper's policy. The raw pinned catalog is
+# still the only authority for backend attestation; never compare these views.
+CLIENT_INSTRUCTIONS = """This server provides read-only access to the bound Grafana instance.
+
+Available capabilities:
+- Search dashboards and folders; list and inspect datasources.
+- Read dashboards and extract panel queries; no dashboard creation or updates.
+- Query proxy-verified Prometheus HTTP routes and Loki datasources.
+- Make GET requests only to the proxy's finite Grafana API allowlist.
+
+Custom upstream headers and arbitrary plugin APIs are unsupported. Cloud Monitoring,
+VictoriaLogs and the dedicated VictoriaMetrics plugin's /api/ds/query route are
+unsupported; VictoriaMetrics behind verified Prometheus HTTP routes can work.
+Loki log queries default to 10 entries and have a configured maximum of 20.
+During preparation, operations return a retryable error and send no Grafana request.
+Discovery alone does not establish authentication or readiness.
+
+Timestamp parameters without a timezone offset are interpreted as UTC. Include an
+offset such as '-05:00' or use relative syntax such as 'now-1h'.
+"""
+PROMETHEUS_SCOPE = (
+    " Uses proxy-verified Prometheus HTTP routes only. Cloud Monitoring and the "
+    "dedicated VictoriaMetrics plugin query route are unsupported."
+)
+TOOL_DESCRIPTIONS = {
+    "grafana_api_request": (
+        "Make a read-only GET request to the proxy's finite Grafana API allowlist, "
+        "with optional jq-style response filtering. Supported paths cover frontend "
+        "settings, datasource inspection/health, search, dashboard reads and fixed "
+        "Prometheus, Loki and Tempo query/metadata routes. Datasource routes require "
+        "UID and protocol verification. Arbitrary API and plugin paths are refused. "
+        "Leave custom headers unset; the proxy owns upstream authentication."
+    ),
+    "get_dashboard_panel_queries": (
+        "Retrieve panel queries from a Grafana dashboard, including row-nested panels "
+        "and all datasource types. Optionally filter by panelId and supply variables "
+        "for substitution. Results include title, raw query, datasource uid/type and, "
+        "when available, processedQuery, refId, requiredVariables and target. Visual "
+        "query builders may return an empty query plus raw target JSON. Extraction "
+        "does not establish query execution support; execute only expressions supported "
+        "by this server's Prometheus or Loki tools."
+    ),
+    "list_loki_label_names": (
+        "List label names in a Loki datasource over a time range (last hour by default). "
+        "Optionally narrow streams with a LogQL matcher such as {namespace=\"prod\"}. "
+        "Returns unique label strings."
+    ),
+    "list_loki_label_values": (
+        "List unique values for labelName in a Loki datasource over a time range "
+        "(last hour by default). Optionally narrow streams with a LogQL matcher such "
+        "as {namespace=\"prod\"}. Use these values to build query filters."
+    ),
+    "query_loki_logs": (
+        "Execute LogQL against a Loki datasource, returning log entries or metric "
+        "samples. Defaults to the last hour, 10 entries and backward direction; "
+        "maximum 20 log entries. Use count_over_time() with queryType='instant' for "
+        "exact line counts. query_loki_stats reports approximate storage statistics. "
+        "Verify labels with the label tools, keep selectors and time ranges narrow, "
+        "and use format='compact' to group results by stream."
+    ),
+    "query_loki_stats": (
+        "Retrieve Loki index statistics for a simple label selector and time range "
+        "(last hour by default): streams, chunks, entries and bytes. The entries "
+        "count describes storage metadata, not exact matching log lines. Use "
+        "query_loki_logs with count_over_time() for exact counts. The selector "
+        "must not contain line filters, parsers or aggregations."
+    ),
+    "query_loki_patterns": (
+        "Retrieve detected Loki log patterns and occurrence counts for a stream "
+        "selector and time range (last hour by default). The logql parameter must "
+        "be a stream selector such as {job=\"nginx\"}, without filters or aggregations."
+    ),
+    "list_prometheus_label_names": (
+        "List label names, optionally filtered by series selectors and time range."
+        + PROMETHEUS_SCOPE
+    ),
+    "list_prometheus_label_values": (
+        "Find values for a label after discovering metric names. Optionally filter "
+        "by series selectors and time range." + PROMETHEUS_SCOPE
+    ),
+    "list_prometheus_metric_names": (
+        "Discover metric names before querying. Supports regex filtering, pagination "
+        "and an optional time range." + PROMETHEUS_SCOPE
+    ),
+    "list_prometheus_metric_metadata": (
+        "Retrieve metadata for a metric, including its type, help and unit."
+        + PROMETHEUS_SCOPE
+    ),
+    "query_prometheus": (
+        "Discover metric names and label values before running a PromQL instant or "
+        "range query. Times accept RFC3339 or relative expressions such as now-1h."
+        + PROMETHEUS_SCOPE
+    ),
+    "query_prometheus_histogram": (
+        "Query histogram data using the supplied metric, label filters and time range."
+        + PROMETHEUS_SCOPE
+    ),
+}
+PARAMETER_DESCRIPTIONS = {
+    ("grafana_api_request", "endpoint"): (
+        "An allowlisted GET path beginning with '/', for example /api/datasources "
+        "or /api/dashboards/uid/abc123. Arbitrary Grafana API paths are unsupported."
+    ),
+    ("grafana_api_request", "headers"): "Custom upstream headers are unsupported; leave unset.",
+    ("list_loki_label_names", "matcher"): (
+        "Optional LogQL stream selector, e.g. {namespace=\"prod\"}; defaults to all streams."
+    ),
+    ("list_loki_label_values", "matcher"): (
+        "Optional LogQL stream selector, e.g. {namespace=\"prod\"}; defaults to all streams."
+    ),
+    ("query_loki_logs", "limit"): "Maximum log lines to return: default 10, configured maximum 20.",
+    **{(tool, "projectName"): "Cloud Monitoring is unsupported by this runtime; omit this parameter."
+       for tool in TOOL_DESCRIPTIONS if "prometheus" in tool},
+}
+
+
+def project_catalog(raw):
+    """Derive client descriptions without changing the upstream contract or policy."""
+    public = copy.deepcopy(raw)
+
+    def describe(obj, key, text):
+        if not isinstance(obj, dict) or not isinstance(obj.get(key), str):
+            raise SetupError("Invalid client catalog description target.")
+        obj[key] = text
+
+    try:
+        describe(public["initialize"], "instructions", CLIENT_INSTRUCTIONS)
+        for tool in public["tools"]:
+            name = tool["name"]
+            if name in TOOL_DESCRIPTIONS:
+                describe(tool, "description", TOOL_DESCRIPTIONS[name])
+            for (owner, parameter), text in PARAMETER_DESCRIPTIONS.items():
+                if owner == name:
+                    describe(tool["inputSchema"]["properties"][parameter], "description", text)
+    except (KeyError, TypeError) as exc:
+        raise SetupError("Invalid client catalog description target.") from exc
+    return public
 
 
 def ordered(values, key):
@@ -44,6 +183,7 @@ def load_catalog(directory):
 class Frontend:
     def __init__(self, catalog):
         self.catalog = catalog
+        self.public_catalog = project_catalog(catalog)
         self.client_initialized = False
         self.client_notified = False
         self.ready = False
@@ -88,7 +228,7 @@ class Frontend:
             if not isinstance(params.get("protocolVersion"), str) or not isinstance(params.get("capabilities"), dict):
                 return error(-32602, "Invalid initialization parameters.")
             self.client_initialized = True
-            return result(self.catalog["initialize"])
+            return result(self.public_catalog["initialize"])
         if method == "ping":
             return result({})
         if not self.client_notified:
@@ -96,7 +236,7 @@ class Frontend:
         if method in DISCOVERY:
             if params.get("cursor") is not None:
                 return error(-32602, "Invalid discovery cursor.")
-            return result({DISCOVERY[method][0]: self.catalog[DISCOVERY[method][0]]})
+            return result({DISCOVERY[method][0]: self.public_catalog[DISCOVERY[method][0]]})
         if method not in {"tools/call", "resources/read"}:
             return error(-32601, "Unsupported MCP method.")
         if method == "tools/call" and params.get("name") not in {v["name"] for v in self.catalog["tools"]}:

@@ -1,5 +1,34 @@
 # Validation evidence
 
+## Restricted discovery descriptions
+
+Validated on macOS on 2026-09-27 in an isolated tree combining the latest base
+branch with the installer changes:
+
+- All 117 deterministic tests passed in 178.173 seconds, including description
+  projection, raw-catalog immutability and drift rejection, stable discovery
+  before/after readiness, and unsupported-route rejection without upstream I/O.
+- The official checksum-verified MCP 1.4.0 executable reproduced the unchanged
+  pinned catalog. Client descriptions are a separate in-memory view.
+- Actual Codex and Claude CLIs passed initial and repeat registration, synthetic
+  authenticated readiness, and local checks in disposable homes. These checks
+  do not establish live Nebius/Grafana access or current-chat activation.
+- Repository validation passed for all 14 skills, including shared-preamble,
+  frontmatter, skills-ref, manifest and native Claude plugin checks. Ruff,
+  ShellCheck, Bash syntax, Python AST and JSON checks passed.
+- Independent review found no blocking defect. The proxy policy, credential
+  handling, runtime inventory and pinned catalog were unchanged.
+- The final PR scope is the installer folder and one README table row; the root
+  changelog matches the base. Existing project requirements/design stay intact.
+
+The live-access, renewal, Linux and model-evaluation limits below still apply.
+Default Markdown lint is not fully clean: existing line-length/table style
+findings remain, and the base README/shared preamble also have missing code-fence
+languages and a table-column issue. No shared policy or lint configuration was
+changed to address those out-of-scope findings.
+
+## Previous watchdog boundary validation
+
 The watchdog boundary fix was validated on macOS on 2026-09-14.
 Credentials and Grafana data in tests were synthetic. Native client checks used
 disposable homes in the preceding revision; those checks were not rerun for

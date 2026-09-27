@@ -88,6 +88,22 @@ def local_request(server, method="GET", target="/api/datasources", body=None, he
 
 
 class ProxyTests(unittest.TestCase):
+    def test_catalog_api_example_and_unsupported_backends_keep_route_boundary(self):
+        with upstream() as (backend, calls, _):
+            policy = proxy.ReadPolicy(backend)
+            self.assertEqual(json.loads(policy.request("GET", "/api/datasources"))[0]["uid"], "metrics")
+            self.assertEqual(len(calls), 1)
+            for method, path in (
+                ("GET", "/api/org"),
+                ("POST", "/api/ds/query"),
+                ("GET", "/api/datasources/proxy/uid/logs/select/logsql/query"),
+            ):
+                with self.subTest(path=path), self.assertRaises(proxy.ProxyError) as error:
+                    policy.request(method, path)
+                self.assertEqual(error.exception.status, 403)
+                self.assertEqual(error.exception.code, "route-refused")
+            self.assertEqual(len(calls), 1)
+
     def test_datasource_health_verifies_uid_and_preserves_status(self):
         for status, result in ((200, {"status": "OK"}), (200, {"status": "ERROR"}),
                                (501, {"message": "plugin has no health handler"})):

@@ -75,7 +75,8 @@ for line in sys.stdin:
         continue
     if request.get('method') == 'initialize':
         result = {'protocolVersion': '2025-03-26', 'capabilities': {'tools': {'listChanged': True}, 'resources': {}},
-                  'serverInfo': {'name': 'fixture', 'version': '1.4.0'}}
+                  'serverInfo': {'name': 'fixture', 'version': '1.4.0'},
+                  'instructions': 'Synthetic read-only fixture.'}
     elif request.get('method') == 'ping':
         result = {}
     elif request.get('method') == 'resources/list':
@@ -145,7 +146,8 @@ class FakeSystem:
         catalog = json.loads((self.source / "catalog.json").read_bytes())
         catalog.update(initialize={"protocolVersion": "2025-03-26",
                                   "capabilities": {"tools": {"listChanged": True}, "resources": {}},
-                                  "serverInfo": {"name": "fixture", "version": "1.4.0"}},
+                                  "serverInfo": {"name": "fixture", "version": "1.4.0"},
+                                  "instructions": "Synthetic read-only fixture."},
                        tools=[{"name": "list_datasources", "inputSchema": {"type": "object"}}],
                        resources=[], resourceTemplates=[])
         (self.source / "catalog.json").write_bytes(json_bytes(catalog))

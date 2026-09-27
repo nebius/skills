@@ -9,12 +9,96 @@ import unittest
 
 from fixtures import FakeSystem, SCRIPTS
 from common import SetupError
-from mcp_frontend import DISCOVERY, Frontend, PREPARING, PROTOCOL, exchange, load_catalog
+from mcp_frontend import DISCOVERY, Frontend, PREPARING, PROTOCOL, exchange, load_catalog, project_catalog
+
+
+class CatalogProjectionTests(unittest.TestCase):
+    def setUp(self):
+        self.raw = load_catalog(SCRIPTS)
+
+    def test_only_reviewed_description_leaves_change_without_mutating_raw(self):
+        before = copy.deepcopy(self.raw)
+        public = project_catalog(self.raw)
+        self.assertEqual(self.raw, before)
+        descriptions = {
+            "grafana_api_request", "get_dashboard_panel_queries",
+            "list_loki_label_names", "list_loki_label_values", "query_loki_logs",
+            "query_loki_stats", "query_loki_patterns", "list_prometheus_label_names",
+            "list_prometheus_label_values", "list_prometheus_metric_names",
+            "list_prometheus_metric_metadata", "query_prometheus", "query_prometheus_histogram",
+        }
+        parameters = {
+            ("grafana_api_request", "endpoint"), ("grafana_api_request", "headers"),
+            ("list_loki_label_names", "matcher"), ("list_loki_label_values", "matcher"),
+            ("query_loki_logs", "limit"),
+            *((tool, "projectName") for tool in descriptions if "prometheus" in tool),
+        }
+        self.assertNotEqual(public["initialize"]["instructions"], before["initialize"]["instructions"])
+        public["initialize"]["instructions"] = before["initialize"]["instructions"]
+        for tool, original in zip(public["tools"], before["tools"], strict=True):
+            name = tool["name"]
+            if name in descriptions:
+                self.assertNotEqual(tool["description"], original["description"])
+                tool["description"] = original["description"]
+            for expected_name, parameter in parameters:
+                if name == expected_name:
+                    prop = tool["inputSchema"]["properties"][parameter]
+                    original_prop = original["inputSchema"]["properties"][parameter]
+                    self.assertNotEqual(prop["description"], original_prop["description"])
+                    prop["description"] = original_prop["description"]
+        self.assertEqual(public, before)
+        public["tools"][0]["name"] = "modified-copy"
+        self.assertEqual(self.raw, before)
+
+    def test_client_guidance_matches_restricted_capabilities(self):
+        public = project_catalog(self.raw)
+        tools = {tool["name"]: tool for tool in public["tools"]}
+        instructions = public["initialize"]["instructions"]
+        self.assertIn("read-only", instructions)
+        self.assertNotIn("update, and create", instructions)
+        api = tools["grafana_api_request"]
+        self.assertIn("allowlist", api["description"])
+        self.assertNotIn("any Grafana API", api["description"])
+        self.assertIn("/api/datasources", api["inputSchema"]["properties"]["endpoint"]["description"])
+        self.assertNotIn("/api/org", json.dumps(api))
+        self.assertIn("leave unset", api["inputSchema"]["properties"]["headers"]["description"])
+        self.assertNotIn("run_panel_query", tools["get_dashboard_panel_queries"]["description"])
+        for name, tool in tools.items():
+            if "loki" in name:
+                self.assertNotIn("VictoriaLogs", json.dumps(tool))
+                self.assertNotIn("LogsQL", json.dumps(tool))
+            if "prometheus" in name:
+                self.assertIn("verified Prometheus HTTP routes", tool["description"])
+                self.assertIn("unsupported", tool["inputSchema"]["properties"]["projectName"]["description"])
+        self.assertIn("maximum 20", tools["query_loki_logs"]["inputSchema"]["properties"]["limit"]["description"])
+
+    def test_missing_or_non_string_projection_targets_fail_closed(self):
+        for target in ("initialize", "tool", "parameter"):
+            for missing in (True, False):
+                raw = copy.deepcopy(self.raw)
+                api = next(t for t in raw["tools"] if t["name"] == "grafana_api_request")
+                obj, key = {
+                    "initialize": (raw["initialize"], "instructions"),
+                    "tool": (api, "description"),
+                    "parameter": (api["inputSchema"]["properties"]["endpoint"], "description"),
+                }[target]
+                if missing:
+                    del obj[key]
+                else:
+                    obj[key] = 7
+                with self.subTest(target=target, missing=missing), self.assertRaises(SetupError):
+                    project_catalog(raw)
+
+    def test_reduced_catalog_keeps_its_tools_and_schema(self):
+        raw = copy.deepcopy(self.raw)
+        raw["tools"] = [t for t in raw["tools"] if t["name"] == "list_datasources"]
+        self.assertEqual(project_catalog(raw)["tools"], raw["tools"])
 
 
 class FrontendTests(unittest.TestCase):
     def setUp(self):
         self.catalog = load_catalog(SCRIPTS)
+        self.public = project_catalog(self.catalog)
         self.front = Frontend(self.catalog)
 
     def client(self, method, params=None, identifier=1):
@@ -23,7 +107,7 @@ class FrontendTests(unittest.TestCase):
 
     def initialize(self):
         replies, requests = self.client("initialize", {"protocolVersion": PROTOCOL, "capabilities": {}})
-        self.assertEqual(replies[0]["result"], self.catalog["initialize"])
+        self.assertEqual(replies[0]["result"], self.public["initialize"])
         self.assertFalse(requests)
         self.front.client({"jsonrpc": "2.0", "method": "notifications/initialized"})
 
@@ -41,9 +125,31 @@ class FrontendTests(unittest.TestCase):
         self.initialize()
         for method, (field, _) in DISCOVERY.items():
             replies, requests = self.client(method)
-            self.assertEqual(replies[0]["result"], {field: self.catalog[field]})
+            self.assertEqual(replies[0]["result"], {field: self.public[field]})
             self.assertFalse(requests)
         self.assertEqual(self.client("ping")[0][0]["result"], {})
+        self.assertFalse(self.front.ready)
+
+    def test_ready_discovery_matches_preparation_discovery(self):
+        self.initialize()
+        before = {method: self.client(method)[0] for method in DISCOVERY}
+        self.bootstrap()
+        for method, replies in before.items():
+            self.assertEqual(self.client(method), (replies, []))
+
+    def test_projected_backend_metadata_cannot_mask_drift(self):
+        request = self.front.bootstrap()
+        with self.assertRaisesRegex(SetupError, "initialization differs"):
+            self.front.backend({"id": request["id"], "result": self.public["initialize"]})
+        self.assertFalse(self.front.ready)
+        self.front = Frontend(self.catalog)
+        request = self.front.bootstrap()
+        _, requests = self.front.backend({"id": request["id"], "result": self.catalog["initialize"]})
+        changed = copy.deepcopy(self.catalog["tools"])
+        api = next(t for t in changed if t["name"] == "grafana_api_request")
+        api["description"] = "Unexpected upstream description hidden by projection"
+        with self.assertRaisesRegex(SetupError, "discovery differs"):
+            self.front.backend({"id": requests[-1]["id"], "result": {"tools": changed}})
         self.assertFalse(self.front.ready)
 
     def test_preparing_operations_are_retryable_and_never_queued(self):
@@ -121,7 +227,7 @@ class FrontendTests(unittest.TestCase):
                 selector.register(client_read, selectors.EVENT_READ)
                 self.assertTrue(selector.select(0.4))
             response = json.loads(os.read(client_read, 65536))
-            self.assertEqual(response["result"], self.catalog["initialize"])
+            self.assertEqual(response["result"], self.public["initialize"])
             worker.join(2)
             self.assertFalse(worker.is_alive())
             self.assertEqual(errors, ["MCP preparation timed out; invoke setup again."])

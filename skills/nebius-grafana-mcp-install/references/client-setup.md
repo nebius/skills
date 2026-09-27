@@ -48,11 +48,17 @@ they cannot guarantee atomic preservation against every concurrent external
 writer. A detected conflict leaves owned state for inspection and a later retry.
 No shell profile, permission rule, hook or managed setting is changed.
 
-Local initialization, ping and pinned tool/resource discovery are independent of
+Local initialization, ping and tool/resource discovery are independent of
 authentication and Grafana requests. This removes the need to increase startup
 timeouts. A managed host restriction or a client configured with an unusually
 short timeout can still require attention; initialization alone is not proof of
 authenticated readiness or current-session activation.
+
+Client-facing descriptions state the wrapper's supported routes and limits.
+The original upstream catalog is retained separately for strict backend
+verification. Discovery does not grant access to arbitrary Grafana APIs or
+unsupported datasource plugins. This descriptive update uses the existing
+owned runtime update path; no client settings or credential formats change.
 
 When Claude has no user configuration yet, its native add command also creates
 Claude's initial machine/migration metadata. Existing unrelated configuration
