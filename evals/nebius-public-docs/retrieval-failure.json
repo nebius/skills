@@ -1,0 +1,11 @@
+{
+  "skills": [
+    "nebius-public-docs"
+  ],
+  "query": "The docs website cannot be reached from this session. What Kubernetes versions does Nebius currently support?",
+  "expected_behavior": [
+    "Reports retrieval limitations if available public retrieval methods fail.",
+    "Does not present remembered versions or search snippets as verified current support.",
+    "Identifies the official supported-version documentation as the source that must be checked."
+  ]
+}

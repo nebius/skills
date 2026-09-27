@@ -1,0 +1,11 @@
+{
+  "skills": [
+    "nebius-public-docs"
+  ],
+  "query": "Which Kubernetes versions does Nebius currently support?",
+  "expected_behavior": [
+    "Discovers and reads the applicable public supported-version documentation before answering.",
+    "Cites specific pages and distinguishes supported versions from examples or upstream Kubernetes releases.",
+    "Does not run cloud commands or request project credentials."
+  ]
+}

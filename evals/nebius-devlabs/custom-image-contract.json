@@ -1,0 +1,13 @@
+{
+  "skills": [
+    "nebius-devlabs"
+  ],
+  "query": "use my image registry.example.com/ml/lab:v2 for a devlab; its web UI listens on 8080 and my datasets are at /workspace/data",
+  "expected_behavior": [
+    "Uses --image with --primary-route-port 8080 and establishes that the image starts the required web service",
+    "Does not combine image with template or invent template inputs for a custom image",
+    "Resolves a workspace/data mount layout with no identical or ancestor/descendant overlap before dry-run",
+    "Uses --registry-secret for a private image and does not request plaintext registry credentials in the command",
+    "Keeps provisioning gated and validates the platform/preset in the target project"
+  ]
+}

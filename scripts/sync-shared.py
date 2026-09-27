@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stamp shared/preamble.md into every skills/*/SKILL.md between markers.
+"""Stamp shared/preamble.md into CLI skills/*/SKILL.md between markers.
 
 Usage:
   python3 scripts/sync-shared.py           # rewrite drifted files
@@ -13,6 +13,8 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 BEGIN = ("<!-- BEGIN SHARED PREAMBLE (generated from shared/preamble.md — "
          "edit there, then run scripts/sync-shared.py) -->")
 END = "<!-- END SHARED PREAMBLE -->"
+# Explicit exemptions keep missing markers an error for every CLI skill.
+DOCS_ONLY_SKILLS = {"nebius-public-docs"}
 
 
 def main() -> int:
@@ -29,6 +31,12 @@ def main() -> int:
     drifted = []
     for skill_md in skill_files:
         text = skill_md.read_text(encoding="utf-8")
+        if skill_md.parent.name in DOCS_ONLY_SKILLS:
+            if BEGIN in text or END in text:
+                print(f"ERROR: {skill_md.relative_to(ROOT)} is docs-only but has CLI preamble markers",
+                      file=sys.stderr)
+                return 2
+            continue
         if BEGIN not in text or END not in text:
             print(f"ERROR: {skill_md.relative_to(ROOT)} is missing preamble markers",
                   file=sys.stderr)

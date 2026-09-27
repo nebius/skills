@@ -1,0 +1,14 @@
+{
+  "skills": [
+    "nebius-devlabs"
+  ],
+  "query": "create a jupyter devlab on one h100 in my testing project so i can work this afternoon",
+  "expected_behavior": [
+    "Discovers global Devlab templates using template list without parent-id and resolves the requested template inputs",
+    "Resolves the same profile/project for discovery, name lookup, dry-run, and create; validates the preset inside the selected platform catalog entry",
+    "Makes disk size, persistent workspace path, authentication, and intended session duration explicit; does not silently add a public runtime IP",
+    "Uses the command asset for dry-run and presents the resolved launch and ongoing cost before the Tier B confirmation gate",
+    "Does not treat global --timeout as a Devlab auto-stop or invent job-only lifecycle flags",
+    "After an authorized create, verifies resource state and reports the managed URL; distinguishes API completion from UI readiness"
+  ]
+}

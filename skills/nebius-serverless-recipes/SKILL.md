@@ -2,7 +2,7 @@
 name: nebius-serverless-recipes
 description: End-to-end playbooks for Nebius Serverless AI. Use for "how do I train on one GPU", "multi-GPU training", "serve a fine-tuned model", "run batch inference in parallel", "fine-tune with checkpoints", "cheap preemptible training", or "run a Nebius job from GitHub Actions" - when the user wants a complete command chain from image to running artifacts, not a single flag.
 license: Apache-2.0
-compatibility: Requires the nebius CLI (>=0.12.265) with a configured profile; jq recommended
+compatibility: Requires the nebius CLI (>=0.12.277) with a configured profile; jq recommended
 metadata:
   version: "0.1.0"
 allowed-tools:
@@ -45,7 +45,7 @@ nebius config get parent-id    # project-...
 nebius config get tenant-id    # tenant-...
 ```
 
-These skills require CLI `0.12.247` or newer; an individual skill may state a higher floor (the Serverless skills need `0.12.265`) — the stricter number wins. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
+These skills require CLI `0.12.247` or newer; an individual skill may state a higher floor (the Serverless skills need `0.12.277`) — the stricter number wins. If `nebius version` is older, stop and ask the user to update the CLI before relying on the commands or schemas below.
 
 If any check fails or an ID comes back empty, stop and walk the user through [CLI installation and profile setup](https://docs.nebius.com/cli/install): `curl -sSL https://storage.eu-north1.nebius.cloud/cli/install.sh | bash`, then `nebius profile create --parent-id <project-id>`. **Print those commands for the user to run — do not run them yourself**: the installer writes to their machine and the shown federation-profile command opens a browser and blocks. An expired session does not show up here; it surfaces on the first real API call, and re-auth is the same human task.
 
@@ -65,15 +65,15 @@ Compute resources are generally **project**-scoped; public-image discovery is re
 
 **Async operations.** Mutations return an operation; by default the CLI blocks until it completes. With `--async` it returns an operation id — poll with `nebius <service> <resource> operation wait <operation-id>`.
 
-**Safety tiers.**
+**Safety tiers.** Every operation falls in exactly one tier; when a command fits two, the higher (more restrictive) tier wins.
 
 | Tier | Operations | Behavior |
 |---|---|---|
-| A — read | `list`, `get`, `get-by-name`, `batch-get`, `list-*`, `logs`, `--help` | Run freely. |
-| B — gated write | `create`, `update`, `start`, `stop`, quota/capacity allowance changes | Print the fully resolved command verbatim, state what it changes and the cost implication, wait for explicit user confirmation, then run it exactly once. Never batch mutations; never retry one after an ambiguous failure. |
-| C — refuse | `delete`, `purge`, credential issuance (`iam get-access-token`, access keys; sole exception: `iam auth-public-key generate` is Tier B), `-I`/`--impersonate-service-account-id` (a global flag, valid on *every* command — including otherwise-free reads) | Do not run. Print the exact command for the human to run themselves and explain the blast radius. |
+| A — read | `list`, `get`, `get-by-name`, `batch-get`, `list-*`, `logs`, `--help` | Run freely — unless the command emits credential material, which puts it in C whatever its verb. |
+| B — gated write | `create`, `update`, `start`, `stop`, quota/capacity allowance changes | Print the fully resolved command verbatim, state what it changes and the cost implication, wait for explicit user confirmation, then run it exactly once. Never batch mutations; never retry one after an ambiguous failure. A command or rendered template carrying a literal secret is never printed and never run: it *accepts* key material, so it is Tier C — replace the literal with a secret selector, or hand the command to the human with the value left as a placeholder. |
+| C — refuse | `delete`, `purge`, credential issuance (`iam get-access-token`, access keys; sole exception: `iam auth-public-key generate` is Tier B), any command that emits or accepts token/key material whatever its verb — a raw read whose output carries a token (secret-store payloads, an endpoint spec's auth token) included, `-I`/`--impersonate-service-account-id` (a global flag, valid on *every* command — including otherwise-free reads) | Do not run. Print the exact command for the human to run themselves and explain the blast radius. **Exposure is the line, not handling:** a credential captured into an unechoed shell variable and consumed inside the same compound command stays at its verb's own tier — what Tier C refuses is the value reaching tool output, the transcript, shell history, or a file. So the endpoint smoke test (`TOKEN=$(… | jq -r '.spec.auth_token') && curl -H "Authorization: Bearer $TOKEN" …`) is permitted, while a raw spec dump, `echo $TOKEN`, or a literal token typed into a flag is not. |
 
-**Secrets.** Never print or persist tokens, access keys, or the contents of `~/.nebius/credentials.json`.
+**Secrets.** Never print or persist tokens, access keys, or the contents of `~/.nebius/credentials.json`. Some Tier A reads carry credential material in their output: on a token-auth endpoint `ai endpoint get`/`get-by-name` return the bearer token at `.spec.auth_token` and `ai endpoint list` returns it for every item it lists, while job and endpoint specs carry plain `--env` values and registry passwords. Never read those raw — project the fields you need, e.g. `| jq '{id: .metadata.id, state: .status.state, urls: .status.public_endpoints}'`, or `| jq '.items[]? | {…}'` on a list (the `?` matters: an empty list can come back as bare `{}`, and `.items[]` on that aborts with "Cannot iterate over null").
 <!-- END SHARED PREAMBLE -->
 
 **Every `create` / `endpoint create` below is a Tier B gated write.** These recipes show the command *chain* — they are not a license to skip the gate. For each mutating step: dry-run, state the hourly/daily cost (https://nebius.com/prices), print the resolved command, wait for an explicit yes, run once. `docker`, `aws`, and `curl` are not pre-approved — they go through the normal permission flow. Never leave a job or endpoint in a billable state without telling the user, with its cost.
@@ -135,8 +135,13 @@ nebius ai endpoint create --parent-id <project> --name my-llm \
   --volume <models-bucket-id>:/models:ro \
   --env-secret HUGGING_FACE_HUB_TOKEN=<mb-selector> \
   --subnet-id <subnet> --async
-# → the managed https:// URL is in status.public_endpoints; smoke-test it before declaring success.
+# → --async returns an operation id; poll and read the URL filtered. The raw get carries the
+#   bearer token at .spec.auth_token, so never read a token-auth endpoint unprojected:
+nebius ai endpoint get --id <endpoint-id> --format json \
+  | jq '{state: .status.state, urls: .status.public_endpoints}'
 ```
+
+Smoke-test the URL before declaring success: the token belongs in an unechoed shell variable, never in the transcript — the variable-only curl form is in `nebius-serverless-endpoints`.
 
 Keep weights **out of the image** — mount the bucket `ro` and load from the mount.
 
@@ -179,20 +184,20 @@ Training code must resume from the newest checkpoint at startup for the restart 
 
 ## 6. Cost-optimized preemptible training
 
-`--preemptible` gets the spot discount but the VM can be reclaimed at any time — only safe when the job checkpoints frequently (every ~5–15 min of compute) and resumes. Not for tight wall-clock deadlines. Same shape as recipe 5, plus `--preemptible`:
+`--preemptible` gets the spot discount but the VM can be reclaimed at any time — only safe when the job checkpoints frequently (every ~5–15 min of compute) and resumes. Not for tight wall-clock deadlines. With dynamic pricing, `--preemptible` also takes a pricing model: `--follows-spot-price` (uncapped, below) or `--spot-pricing-policy-id <id>` to cap the bid so a price spike preempts rather than overcharges (discover/create policies via `nebius billing pricing-policy` — see `nebius-billing`). Same shape as recipe 5, plus those flags:
 
 ```bash
 nebius ai job create --parent-id <project> --name ft-spot-abc123 \
   --image cr.eu-north1.nebius.cloud/<reg>/ft:v1 \
   --platform gpu-h100-sxm --preset 1gpu-16vcpu-200gb \
-  --timeout 72h --preemptible \
+  --timeout 72h --preemptible --follows-spot-price \
   --restart-policy on-failure --restart-attempts -1 \
   --volume <checkpoint-fs-id>:/ckpts:rw \
   --env CKPT_DIR=/ckpts --env RESUME_FROM_LATEST=true \
   --subnet-id <subnet> --async
 ```
 
-State both the discounted rate and that each preemption loses progress since the last checkpoint.
+State the pricing model (uncapped vs capped bid), that the charge is the live spot price (below the calculator's on-demand rate; with a policy, never above its bid), and that each preemption loses progress since the last checkpoint.
 
 ## 7. Run a job from GitHub Actions (CI)
 
