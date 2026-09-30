@@ -24,8 +24,6 @@ No bundled server. Documentation research needs web access; operational skills u
 | [nebius-devlabs](skills/nebius-devlabs/SKILL.md) | Interactive GPU/CPU development environments: templates, workspaces, web/SSH access, failed-job debugging, gated stop/restart |
 | [nebius-billing](skills/nebius-billing/SKILL.md) | Price estimates (calculator: hourly/monthly for VMs, disks, filesystems) and pricing policies for preemptible (spot) VMs — cap the max spot price, the id behind `--spot-pricing-policy-id` |
 
-Nebius **Token Factory** (inference / fine-tuning) is intentionally out of scope — it has a separate API and keys. See [Arindam200/nebius-skills](https://github.com/Arindam200/nebius-skills) for that lifecycle.
-
 ## Safety model
 
 CLI skills ship the same three-tier model, in prose **and** in `allowed-tools`. The documentation skill reads public sources without running cloud commands or accessing credentials.
