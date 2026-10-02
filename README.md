@@ -4,8 +4,6 @@ Portable, pure-text agent skills for researching **Nebius AI Cloud** documentati
 
 No bundled server. Documentation research needs web access; operational skills use the `nebius` CLI.
 
-> **Status: Phase 1 (private).** Not published anywhere until nebius org approval — see the project plan. Until the repo is public, replace `nebius/skills` in the commands below with a local checkout path or private URL.
-
 ## Skills
 
 | Skill | What it does |

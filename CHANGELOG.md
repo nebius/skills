@@ -2,7 +2,7 @@
 
 All notable changes to this repository. Versioning is repo-wide semver; the plugin manifests carry the same version.
 
-## 0.1.0 — Phase 1 (unreleased)
+## 0.1.0 — 2026-09-28
 
 - Skill `nebius-public-docs`: public documentation research with citations, targeted Markdown retrieval, and optional operational handoffs; no Nebius account or CLI required. Added documentation-only preamble handling and narrowed CLI setup routing.
 
