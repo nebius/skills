@@ -1,0 +1,7 @@
+id,should_trigger,prompt
+codex-setup,true,"Use nebius-grafana-mcp-install to check Grafana MCP setup for Codex with my human profile."
+claude-setup,true,"Install the Nebius Grafana MCP integration for Claude Code with my selected human profile."
+owned-update,true,"Update my existing installer-owned Nebius Grafana MCP registration for Codex."
+grafana-query,false,"Use my existing Grafana MCP to inspect GPU utilization."
+external-grafana,false,"Set up an unrelated Grafana Cloud MCP using a Grafana service account key."
+nebius-auth,false,"Repair my Nebius CLI profile and agent authentication hook."

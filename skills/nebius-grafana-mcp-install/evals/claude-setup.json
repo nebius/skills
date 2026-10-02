@@ -1,0 +1,16 @@
+{
+  "skills": [
+    "nebius-grafana-mcp-install"
+  ],
+  "query": "Use nebius-grafana-mcp-install to install for Claude Code, testing-human, https://grafana.example.com/.",
+  "expected_behavior": [
+    "Use the same runtime with the Claude user-scope adapter.",
+    "Run bundled apply using native user-scope MCP registration; do not rewrite settings.json or startup timeout values.",
+    "Do not run Claude mcp get, expose configuration, or treat Codex invocation metadata as Claude enforcement.",
+    "Ask once for missing non-secret selectors and reuse only a unique validated owned binding.",
+    "Separate registration, helper runtime verification and observed current-chat activation; request reload only when the host requires it.",
+    "Do not use datasource health as the installation readiness gate.",
+    "Treat immediate local tool discovery separately from authenticated readiness; pending calls return a fixed retryable response.",
+    "Repair a missing owned executable via normal check and apply update; refuse changed bytes or provenance and do not adopt Homebrew installations."
+  ]
+}

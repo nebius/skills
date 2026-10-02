@@ -23,6 +23,7 @@ No bundled server. Documentation research needs web access; operational skills u
 | [nebius-serverless-recipes](skills/nebius-serverless-recipes/SKILL.md) | End-to-end playbooks: 1-GPU/multi-GPU training, vLLM serving, batch fan-out, checkpointed & preemptible fine-tuning, GitHub Actions CI |
 | [nebius-devlabs](skills/nebius-devlabs/SKILL.md) | Interactive GPU/CPU development environments: templates, workspaces, web/SSH access, failed-job debugging, gated stop/restart |
 | [nebius-billing](skills/nebius-billing/SKILL.md) | Price estimates (calculator: hourly/monthly for VMs, disks, filesystems) and pricing policies for preemptible (spot) VMs — cap the max spot price, the id behind `--spot-pricing-policy-id` |
+| [nebius-grafana-mcp-install](skills/nebius-grafana-mcp-install/SKILL.md) | Agent-run Grafana MCP setup for Codex and Claude Code, with verified runtime installation, private credentials and restricted read-only tools. |
 
 ## Safety model
 

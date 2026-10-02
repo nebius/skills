@@ -1,0 +1,11 @@
+{
+  "skills": [
+    "nebius-grafana-mcp-install"
+  ],
+  "query": "My installer-owned Codex registration was interrupted after add; finish the update.",
+  "expected_behavior": [
+    "Check the ownership receipt and exact partial entry.",
+    "Run bundled apply and include update when owned repair requires it; allow browser sign-in when needed.",
+    "Preserve unrelated settings and stop on unknown configuration or origin drift."
+  ]
+}
