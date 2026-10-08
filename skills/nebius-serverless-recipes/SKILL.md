@@ -184,7 +184,7 @@ Training code must resume from the newest checkpoint at startup for the restart 
 
 ## 6. Cost-optimized preemptible training
 
-`--preemptible` gets the spot discount but the VM can be reclaimed at any time — only safe when the job checkpoints frequently (every ~5–15 min of compute) and resumes. Not for tight wall-clock deadlines. With dynamic pricing, `--preemptible` also takes a pricing model: `--follows-spot-price` (uncapped, below) or `--spot-pricing-policy-id <id>` to cap the bid so a price spike preempts rather than overcharges (discover/create policies via `nebius billing pricing-policy` — see `nebius-billing`). Same shape as recipe 5, plus those flags:
+`--preemptible` gets the spot discount but the VM can be reclaimed at any time — only safe when the job checkpoints frequently (every ~5–15 min of compute) and resumes. Not for tight wall-clock deadlines. `--preemptible` **requires** a pricing model — one of `--follows-spot-price` (uncapped, below) or `--spot-pricing-policy-id <id>` to cap the bid so a price spike preempts rather than overcharges (discover/create policies via `nebius billing pricing-policy` — see `nebius-billing`). Same shape as recipe 5, plus those flags:
 
 ```bash
 nebius ai job create --parent-id <project> --name ft-spot-abc123 \
