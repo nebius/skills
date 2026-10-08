@@ -92,7 +92,7 @@ Availability differs per region (RTX 6000-class platforms exist only in some) �
 
 ## Preemptible pricing model (dynamic pricing)
 
-With `--preemptible` you also choose how you pay — exactly one of three mutually-exclusive flags (GPU platforms only). **As of 2026-10-08 a pricing model is mandatory with `--preemptible`** — a bare `--preemptible` no longer defaults silently.
+With `--preemptible` you **must** also choose how you pay — exactly one of three mutually-exclusive flags (GPU platforms only). A pricing model is **required**: a bare `--preemptible` is rejected at create with `spec.pricing_model: pricing model must be specified for a preemptible instance`.
 
 - `--follows-spot-price` — accept the current spot price, **no cap**. Cost floats with the market; the VM is preempted only on capacity, not price.
 - `--spot-pricing-policy-id <id>` — cap at a pricing policy's max bid. If the market rises above the bid the VM is **preempted rather than billed higher**.

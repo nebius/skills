@@ -103,6 +103,7 @@ Errors print as **plain text even with `--format json`** (until MSPDEV-778) — 
 
 - **`PermissionDenied` mentioning the VPC API** on job/endpoint create → the account has Serverless permissions but lacks a VPC grant (MSPDEV-784). Retrying cannot help; report the missing VPC grant on the project and hand the role fix to the user.
 - **Other `PermissionDenied` / empty lists where resources exist** → wrong `--parent-id` scope or wrong profile; re-run the grounding checks before anything else.
+- **`InvalidArgument` / `spec.pricing_model: pricing model must be specified for a preemptible instance`** → `--preemptible` was passed with no pricing model. Add exactly one of `--follows-spot-price` (accept live spot) or `--spot-pricing-policy-id <id>` (cap at a policy bid — see `nebius-billing`), or drop `--preemptible` for an on-demand VM. Required for preemptible since 2026-10-08.
 - **`RESOURCE_EXHAUSTED` / "not enough resources"** → the platform is out of capacity in that region. Offer: a different preset size, a sibling platform (L40S, or RTX 6000-class in regions that have it — verify with `nebius compute platform list`), `--preemptible`, or another region/project. Quota increases go through the console (Quotas page) — that's a human step.
 - **Quota errors** arrive **in batches** — one response can carry several violated quota codes. Read them all and address the full set; fixing one and retrying discovers the next the slow way.
 - **Authentication errors** → session or token expired; re-auth is a human step → `nebius-serverless-setup`.

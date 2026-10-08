@@ -119,7 +119,7 @@ Add `--runner pooling` (vLLM ≥ 0.14; older builds used `--task embed`), plus `
 
 ## Preemptible pricing (optional, interruption-tolerant serving only)
 
-`--preemptible` runs the endpoint on a spot VM. With it you choose how you pay — exactly one of three mutually-exclusive flags (GPU platforms only). **As of 2026-10-08 a pricing model is mandatory with `--preemptible`** — a bare `--preemptible` no longer defaults silently.
+`--preemptible` runs the endpoint on a spot VM. With it you **must** choose how you pay — exactly one of three mutually-exclusive flags (GPU platforms only). A pricing model is **required**: a bare `--preemptible` is rejected at create with `spec.pricing_model: pricing model must be specified for a preemptible instance`.
 
 - `--follows-spot-price` — accept the current spot price, **no cap**; preempted only on capacity, not price.
 - `--spot-pricing-policy-id <id>` — cap at a pricing policy's max bid; if the market rises above it the VM is **preempted rather than billed higher**. Get an existing id with `nebius billing pricing-policy list --parent-id <project-id> --format json` (its platform must match `--platform`); creating or changing a policy is a billing task — see `nebius-billing`.
