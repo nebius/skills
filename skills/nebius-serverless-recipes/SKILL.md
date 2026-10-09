@@ -197,7 +197,7 @@ nebius ai job create --parent-id <project> --name ft-spot-abc123 \
   --subnet-id <subnet> --async
 ```
 
-State the pricing model (uncapped vs capped bid), that the charge is the live spot price (below the calculator's on-demand rate; with a policy, never above its bid), and that each preemption loses progress since the last checkpoint.
+State the pricing model (uncapped vs capped bid), the live spot price (from the calculator with a spot flag + `--preemptible-on-preemption STOP`; with a policy, never above its bid), and that each preemption loses progress since the last checkpoint.
 
 ## 7. Run a job from GitHub Actions (CI)
 
