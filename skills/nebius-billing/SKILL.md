@@ -1,6 +1,6 @@
 ---
 name: nebius-billing
-description: Nebius billing - resource price estimates and preemptible-VM pricing policies. Use for "how much will this cost", "hourly/monthly price of a GPU VM", "estimate the price", "set a max spot price", "create a pricing policy", "cap my preemptible bid", "list pricing policies", "why is my policy BLOCKED" - nebius billing v1alpha1 calculator estimate for prices, and pricing-policy list/create/update/delete for the id behind --spot-pricing-policy-id.
+description: Nebius billing - resource price estimates and preemptible-VM pricing policies. Use for "how much will this cost", "hourly/monthly price of a GPU VM", "current spot price", "estimate the price", "set a max spot price", "create a pricing policy", "cap my preemptible bid", "list pricing policies", "why is my policy BLOCKED" - nebius billing v1alpha1 calculator estimate for on-demand and live spot prices, and pricing-policy list/create/update/delete for the id behind --spot-pricing-policy-id.
 license: Apache-2.0
 compatibility: Requires the nebius CLI (>=0.12.277) with a configured profile; jq recommended
 metadata:
@@ -112,7 +112,19 @@ nebius billing v1alpha1 calculator estimate-batch --format json \
 
 **Offer type** (`--offer-types`, on both verbs): `offer_type_contract_price` prices at the tenant's negotiated **contract** rate; omitted / `offer_type_unspecified` gives the public **list / on-demand** price.
 
-**What it does NOT quote: the live spot price.** Estimates are the on-demand/contract ceiling; a preemptible VM is billed at the dynamic spot price (≤ on-demand). Use `estimate` for the ceiling and to size a pricing-policy bid — then cap below with a policy.
+**Live spot price.** `estimate` returns the **live spot price** when you pass a spot flag **together with** `--resource-spec-compute-instance-spec-preemptible-on-preemption STOP` (verified CLI 0.12.287). Without the preemption flag — or with `--resource-spec-compute-instance-spec-on-demand` — it returns the on-demand price. Spot floats with the market, so re-check before sizing a bid.
+
+```bash
+# live spot (e.g. RTX6000 uk-south2: on-demand 1.80, spot 0.79)
+nebius billing v1alpha1 calculator estimate \
+  --resource-spec-compute-instance-spec-parent-id <project-id> \
+  --resource-spec-compute-instance-spec-resources-platform gpu-rtx6000-a \
+  --resource-spec-compute-instance-spec-resources-preset 1gpu-24vcpu-218gb \
+  --resource-spec-compute-instance-spec-follows-spot-price \
+  --resource-spec-compute-instance-spec-preemptible-on-preemption STOP --format json
+```
+
+`--spot-pricing-policy-id <id>` (with the same preemption flag) also returns the live spot price, not the policy's bid. Don't use `--resource-spec-compute-instance-spec-preemptible-priority` (deprecated — the CLI warns, no effect).
 
 ## Discover policies (Tier A)
 
@@ -125,7 +137,7 @@ Read `spec.compute_instance.platform` (which platform it caps), the bid at `spec
 
 ## Create / raise a bid (Tier B — gated)
 
-Size the bid from the calculator above: the highest legal cap is the on-demand price minus `0.01`; a bid below the live spot price is accepted but starts `BLOCKED`. Print the command, state the bid and what it caps, confirm, run once:
+Size the bid in the window **live spot ≤ bid ≤ on-demand − $0.01**, and never below the **0.79 USD/GPU-hr floor** — get both live spot and on-demand from the calculator above. A bid **≥ live spot** is `ALLOWED`; a bid **below live spot** is accepted but created `BLOCKED` (silently); a bid **below the floor** is rejected outright. Print the command, state the bid and what it caps, confirm, run once:
 
 ```bash
 nebius billing pricing-policy create --parent-id <project-id> \
@@ -144,7 +156,7 @@ nebius billing pricing-policy update <pricing-policy-id> \
 Constraints (verified):
 
 - A bid **below** the current market price is accepted but the policy starts/stays `BLOCKED` — it exists but backs no VM until the market falls to it.
-- A bid **outside the allowed range** fails `OUT_OF_RANGE`. The **maximum allowed bid is 1 cent below the current on-demand price** (e.g. on-demand `1.80` → max `1.790`) — get on-demand from the calculator above and subtract `0.01` for the highest legal cap.
+- A bid **outside the allowed range** fails `OUT_OF_RANGE`. The **ceiling is on-demand − $0.01** (e.g. on-demand `1.80` → max `1.790`, "max_price is too high"); the **floor is 0.79 USD/GPU-hr** — below it, create fails "`max_price is too low … MaxPriceTooLow … limit: 0.79`". Get on-demand and live spot from the calculator above to land inside the window.
 - The bid can change **only while no VM runs under the policy** (`status.running_vm_count == 0`), else `FAILED_PRECONDITION`. `metadata.name` can change any time; other spec fields are immutable.
 - Policies are **tenant-quota-limited** — past the limit `create` fails `RESOURCE_EXHAUSTED`.
 - `create`/`update` return an operation; with `--async` poll `nebius billing pricing-policy operation wait <op-id>`.
