@@ -1,0 +1,11 @@
+{
+  "skills": [
+    "nebius-api-debug"
+  ],
+  "query": "The instance update command failed. Collect evidence for the support ticket.",
+  "expected_behavior": [
+    "Enables --debug for a permitted reproduction and captures stdout, stderr, and exit status.",
+    "Collects all request Trace IDs and attaches the full debug dump to the ticket.",
+    "Does not replay an ambiguous update without checking its outcome and authorization."
+  ]
+}
