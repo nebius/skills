@@ -9,6 +9,7 @@ No bundled server. Documentation research needs web access; operational skills u
 | Skill | What it does |
 |---|---|
 | [nebius-public-docs](skills/nebius-public-docs/SKILL.md) | Public documentation research: capabilities, configuration, supported versions, and documented limits with citations; no account or CLI required |
+| [nebius-api-debug](skills/nebius-api-debug/SKILL.md) | Debug CLI, Terraform provider, and SDK failures; collect request Trace IDs and log dumps |
 | [nebius-cloud-basics](skills/nebius-cloud-basics/SKILL.md) | Foundation: profiles, `--parent-id`/tenant resolution, JSON output, paging, async operations, safety tiers |
 | [nebius-compute-inventory](skills/nebius-compute-inventory/SKILL.md) | Read-only inventory: instances, disks, filesystems, GPU clusters, images, platforms |
 | [nebius-capacity-quotas](skills/nebius-capacity-quotas/SKILL.md) | "Can I launch 8×B200?" — capacity advice (tenant-scoped), reservations, quota allowances |

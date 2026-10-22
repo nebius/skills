@@ -1,0 +1,12 @@
+{
+  "skills": [
+    "nebius-api-debug"
+  ],
+  "query": "Our Python app has too much logging. Diagnose a failed SDK request and prepare diagnostic artifacts.",
+  "expected_behavior": [
+    "Enables DEBUG on the nebius logger with a dedicated handler rather than changing the root logger.",
+    "Preserves the failed request object and records available request and trace IDs.",
+    "Provides the SDK debug dump and version without exposing intact credentials.",
+    "Finishes by showing artifact file paths or available download links and any available request Trace IDs; does not search for ticket tools or create/upload a ticket."
+  ]
+}
