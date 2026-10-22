@@ -1,0 +1,12 @@
+{
+  "skills": [
+    "nebius-api-debug"
+  ],
+  "query": "Terraform fails on a nebius resource. Get a useful provider log for this ticket.",
+  "expected_behavior": [
+    "Uses TF_LOG_PROVIDER_NEBIUS=DEBUG and checks for overriding TF_LOG settings.",
+    "Keeps provider and Terraform versions, relevant HCL, request Trace IDs, and the log dump.",
+    "Does not add apply or auto-approve just to reproduce the failure.",
+    "Finishes by showing artifact file paths or available download links and any available request Trace IDs; does not search for ticket tools or create/upload a ticket."
+  ]
+}

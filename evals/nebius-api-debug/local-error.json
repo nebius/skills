@@ -1,0 +1,12 @@
+{
+  "skills": [
+    "nebius-api-debug"
+  ],
+  "query": "The CLI rejects my JSON before making a request. I have no Trace ID.",
+  "expected_behavior": [
+    "Collects a debug run log and the original input when permitted.",
+    "Records that no server Trace ID is available for a local parse failure; does not invent one.",
+    "Keeps useful redacted token fragments but removes any accidentally logged intact credential before presenting artifacts to the user.",
+    "Finishes by showing artifact file paths or available download links and any available request Trace IDs; does not search for ticket tools or create/upload a ticket."
+  ]
+}

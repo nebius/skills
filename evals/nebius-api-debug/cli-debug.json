@@ -1,0 +1,12 @@
+{
+  "skills": [
+    "nebius-api-debug"
+  ],
+  "query": "The CLI command failed. Collect evidence for the support ticket.",
+  "expected_behavior": [
+    "Gets the original command and inputs if missing; enables --debug for an authorized reproduction and captures stdout, stderr, and exit status.",
+    "Collects all request Trace IDs and prepares the full debug dump as artifacts for the user.",
+    "Does not replay a mutation while its outcome or authorization is unclear.",
+    "Finishes by showing artifact file paths or available download links and any available request Trace IDs; does not search for ticket tools or create/upload a ticket."
+  ]
+}
