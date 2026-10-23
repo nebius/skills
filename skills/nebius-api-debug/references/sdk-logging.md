@@ -16,7 +16,7 @@ if err != nil {
 }
 defer logFile.Close()
 logger := slog.New(slog.NewJSONHandler(logFile, &slog.HandlerOptions{Level: slog.LevelDebug}))
-// Add gosdk.WithLogger(logger) to the existing gosdk.New(ctx, ...) options.
+// Add gosdk.WithLogger(logger) to gosdk.New(ctx, ...) before the explicitly requested operation.
 ```
 
 Public Go package: `github.com/nebius/gosdk`.
@@ -40,7 +40,7 @@ sdk_log.setLevel(logging.DEBUG)
 sdk_log.addHandler(handler)
 sdk_log.propagate = False
 try:
-    ...  # Run the original failing request and collect its metadata here.
+    ...  # Perform only the explicitly requested new operation; collect its metadata.
 finally:
     sdk_log.removeHandler(handler)
     handler.close()
@@ -66,7 +66,7 @@ const logger = defaultHandler({
   output: 'nebius-sdk.debug.log',
   useJson: true,
 });
-// Add logger to the existing new SDK({ ..., logger }) options.
+// Pass logger to new SDK({ ..., logger }) for the explicitly requested operation.
 ```
 
 Keep request object before awaiting `request.result`.
