@@ -103,10 +103,11 @@ Match original UTC time, method + request IDs; newest file may belong to another
 Set `source_log` to matching existing file. Copy into fresh private artifact directory:
 
 ```bash
-source_log=/absolute/path/to/matching/cli-run.log
+source_log="/absolute/path/to/matching/cli-run.log"
 (
   umask 077
   capture_dir=$(mktemp -d) || exit 1
+  printf 'Log directory: %s\n' "$capture_dir"
   cp -- "$source_log" "$capture_dir/cli.debug.log" || exit 1
   printf 'Debug artifact: %s\n' "$capture_dir/cli.debug.log"
 )
