@@ -1,7 +1,7 @@
 ---
 name: nebius-api-debug
 description: Use when investigating failed Nebius CLI commands, Terraform provider operations, or SDK calls.
-compatibility: Requires the affected Nebius tool and permission to reproduce the failed operation.
+compatibility: Requires access to diagnostic output from the affected Nebius tool.
 ---
 
 # Nebius API tool diagnostics
@@ -69,13 +69,12 @@ Compute resources are generally **project**-scoped; public-image discovery is re
 
 ## Collect evidence
 
-1. Record tool version, exact command/minimal code, UTC time, endpoint, region, auth method.
-   Include relevant config + inputs; omit credential values.
-2. Enable affected tool debug logs below. Keep stdout, stderr, exit status.
-   Prefer original failing inputs. If comparison needs changed args, inputs, config, or code, record what changed + why.
-3. Reproduce once within existing authorization. Never replay mutation with unknown outcome just for logs.
-   Replay unsafe or unauthorized → collect existing logs; state skipped reproduction + missing evidence.
-   Command prompts interactively for input/approval → collect existing logs or hand reproduction to user with prompts visible. Never bypass approval for logs.
+1. Preserve original debug log + available stdout, stderr, exit status before other tool calls.
+   No log → state missing evidence; never rerun failed operation just for logs.
+2. Record tool version, original command/minimal code, UTC time, endpoint, region, auth method.
+   Include relevant config + inputs; omit credential values. Missing original details → state gap; never invent.
+3. New attempt requires explicit user request. Failed call may already have created a paid resource.
+   Keep interactive input/approval visible; never bypass prompts for logs.
 4. Collect every request Trace ID: retries, auth calls, operation polling included.
    Keep Request IDs, operation IDs, method + timestamp per ID when available.
    Sources: response `x-trace-id`, SDK request metadata, CLI `Trace ID`.
@@ -91,35 +90,42 @@ Finish with prepared artifacts + file locations shown to user. Ticket creation/u
 
 ## CLI
 
-CLI error reproduction/evidence collection: always `--debug`.
-Keep original profile, args, input files; change only for controlled comparison.
+Read existing files first; no CLI setup or API call needed.
+Copy original run log before CLI preflight, version checks, or any other CLI calls: only latest ten runs retained.
 
-Capture stdout + debug stderr separately; keep JSON parseable.
-Credential-bearing stdout: replace `>"$capture_dir/cli.stdout.log"` with `>/dev/null`. Never save raw response.
+CLI saves DEBUG logs by default, all process loggers sharing one `cli-<UTC timestamp>-*.log` file.
+`--help`, `help` + shell completion create no log files; other runs count toward ten-file retention.
+`--debug` only duplicates logs to stderr; file logging needs no flag.
+Default location: `~/.nebius/logs/`.
+Original command used `--config`/`-c` → use `logs/` beside that config file.
+Match original UTC time, method + request IDs; newest file may belong to another command or concurrent run.
 
-Replace `ORIGINAL_ARGUMENTS` with original command args.
+Set `source_log` to matching existing file. Copy into fresh private artifact directory:
 
 ```bash
+source_log=/absolute/path/to/matching/cli-run.log
 (
   umask 077
   capture_dir=$(mktemp -d) || exit 1
-  printf 'Log directory: %s\n' "$capture_dir"
-  cli_status=0
-  nebius --debug ORIGINAL_ARGUMENTS >"$capture_dir/cli.stdout.log" 2>"$capture_dir/cli.debug.log" || cli_status=$?
-  printf 'exit_status=%s\n' "$cli_status" >"$capture_dir/cli.exit.txt"
+  cp -- "$source_log" "$capture_dir/cli.debug.log" || exit 1
+  printf 'Debug artifact: %s\n' "$capture_dir/cli.debug.log"
 )
 ```
 
-Artifacts: captured files + CLI version. Extract Trace IDs from every captured output file; stdout discarded → debug log only.
-User collecting evidence → give exact failing command with `--debug` + capture steps.
+Keep available original stdout/stderr + exit status separately; keep JSON parseable. Never save credential-bearing output.
+Artifacts: copied run log, available original output, tool version + command details. Extract every request Trace ID.
+Log absent (older CLI, rotation, filesystem failure) → collect existing output + IDs; report missing dump.
+Never repeat command, upgrade then replay, or create another resource to obtain logs.
+User collecting evidence → explain where original log lives and how to copy it.
 
 ## Terraform provider
 
+Use existing provider logs first. Configure logging below only for an explicitly requested new operation.
 Enable affected provider logs only; avoid debug across other providers/Terraform Core.
-Unattended capture: supply required variables. Use `-input=false` only when authorized reproduction stays equivalent.
+Unattended capture: supply required variables. Use `-input=false` only when authorized operation stays equivalent.
 Public Nebius provider: `TF_LOG_PROVIDER_NEBIUS=DEBUG`:
 
-Replace `ORIGINAL_ARGUMENTS` with original command args.
+Replace `AUTHORIZED_ARGUMENTS` with explicitly requested command args. Never replay failed operation just for logs.
 
 ```bash
 (
@@ -127,7 +133,7 @@ Replace `ORIGINAL_ARGUMENTS` with original command args.
   capture_dir=$(mktemp -d) || exit 1
   printf 'Log directory: %s\n' "$capture_dir"
   tf_status=0
-  TF_LOG_PROVIDER_NEBIUS=DEBUG terraform ORIGINAL_ARGUMENTS >"$capture_dir/terraform.stdout.log" 2>"$capture_dir/terraform.debug.log" || tf_status=$?
+  TF_LOG_PROVIDER_NEBIUS=DEBUG terraform AUTHORIZED_ARGUMENTS >"$capture_dir/terraform.stdout.log" 2>"$capture_dir/terraform.debug.log" || tf_status=$?
   printf 'exit_status=%s\n' "$tf_status" >"$capture_dir/terraform.exit.txt"
 )
 ```
@@ -141,7 +147,7 @@ Collect Trace IDs for all API requests in failed resource operation.
 
 ## SDKs
 
-Enable affected SDK debug logs before reproduction.
+Use existing SDK logs first. Configure debug logging before an explicitly requested new operation; never repeat call just for logs.
 Keep request + error objects; retain response metadata on failure.
 Read [SDK logging](references/sdk-logging.md): Go, Python, JavaScript/TypeScript setup + Trace IDs.
 Other SDK: inspect installed version logger/request-metadata APIs; invent no debug flag.

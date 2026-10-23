@@ -1,9 +1,9 @@
 # SDK logging
 
 Use installed SDK version APIs. Keep existing app credentials + endpoint config.
-Enable logger before SDK construction or failing request.
+Use existing logs first. Enable logger before SDK construction for an explicitly requested new operation.
 Fresh private output directory per attempt; no mixed logs.
-Snippets configure logging. Add to existing reproduction; keep request/auth setup.
+Snippets configure logging only; keep request/auth setup. Never repeat failed call just to obtain logs.
 
 ## Go
 
